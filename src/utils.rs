@@ -1,13 +1,15 @@
-use crate::BotMessenger;
 use std::collections::HashMap;
+use std::collections::hash_map::Iter;
 
 pub enum MessagingType<'a> {
     POSTBACK(&'a MessagingPostback),
     MESSAGE(&'a MessagingMessage),
 }
 
-pub trait Adder {
-    fn add(self,value: &mut BotMessenger) -> &mut BotMessenger;
+pub enum PipeStatus {
+    NEXT,
+    REPLAY,
+    RESTART,
 }
 
 pub trait Messaging {
@@ -17,23 +19,7 @@ pub trait Messaging {
 }
 
 pub trait PipeBox {
-    fn controle(&self,message: &dyn Messaging) -> Result<bool>;
-    fn core(&self);
-    fn send(&self) -> Result<&BotUser,Err>;
-}
-
-impl Adder for Block {
-    fn add(self,value: &mut BotMessenger) -> &mut BotMessenger {
-        value.blocks.push(self);
-        value
-    }
-}
-
-impl Adder for Conf {
-    fn add(self,value: &mut BotMessenger) -> &mut BotMessenger {
-        value.conf = self;
-        value
-    }
+    fn consume(&self,message: &BotUser) -> PipeStatus;
 }
 
 pub struct Conf {
@@ -88,14 +74,39 @@ pub struct BotUser {
     message: Box<dyn Messaging>,
 }
 
-pub struct Block {
-    childs: HashMap<&'static BotUser,&'static dyn PipeBox>,
+impl PartialEq for BotUser {
+    fn eq(&self, other: &Self) -> bool {
+        self.sender_id == other.sender_id
+    }
+}
+
+impl BotUser {
+    pub fn new(id: &str ,message: Box<dyn Messaging>) -> Self {
+        BotUser{
+            sender_id: String::from(id),
+            message: message,
+        }
+    }
+
+    pub fn get_sender(&self) -> &str {
+        &self.sender_id
+    }
+
+    pub fn get_message(&self) -> &Box<dyn Messaging> {
+        &self.message
+    }
+}
+
+pub struct Block{
+    name: String,
+    childs: HashMap<&'static BotUser,usize>,
     pipe: Vec<Box<dyn PipeBox>>,
 }
 
 impl Default for Block {
     fn default() -> Self {
         Block{
+            name: String::from("Hello"),
             childs: HashMap::new(),
             pipe: Vec::new(),
         }
@@ -103,12 +114,65 @@ impl Default for Block {
 }
 
 impl Block {
-    pub fn new() -> Self {
-        Block::default()
+
+    // Init Block
+    pub fn new(name: &str) -> Self {
+        let mut block = Block::default();
+        block.set_name(name);
+        block
     }
 
-    pub fn attach(user: BotUser) {
-        
+    // Rooting user
+    pub fn root(&mut self ,user: &BotUser) {
+        self.consume(user);
+    }
+
+    // Consume the PipeBox for the user
+    fn consume(&mut self ,user: &BotUser) {
+        // find current user and is index
+        let pair = self.childs.iter_mut().find(|x| {*x.0 == user});
+
+        match pair {
+            Some((_,value)) => {
+                match self.pipe.get(*value) {
+                    Some(pipe_box) => {
+                        match pipe_box.consume(user) {
+                            PipeStatus::NEXT => {
+                                if *value < self.pipe.len() {
+                                    *value = *value + 1;
+                                }
+                                else if *value == self.pipe.len(){
+                                    *value = 0;
+                                }
+                            }
+                            PipeStatus::REPLAY => {
+                                // Nothing to do
+                            }
+                            PipeStatus::RESTART => {
+                                *value = 0;
+                            }
+                        };
+                    }
+                    None => ()
+                }
+            }
+            None => {}
+        }
+    }
+
+    // Setter
+    fn set_name(&mut self, name: &str) -> &mut Self{
+        self.name = String::from(name);
+        self
+    }
+
+    fn add(&mut self, pipeBox: Box<dyn PipeBox>) -> &mut Self {
+        self.pipe.push(pipeBox);
+        self
+    }
+
+    fn iter(&self) -> Iter<'_,&BotUser,usize> {
+        self.childs.iter()
     }
 }
 
@@ -117,7 +181,7 @@ pub struct MessagingPostback {
     botUser: &'static BotUser,
 }
 
-impl Messaging for MessagingPostback {
+impl<'a> Messaging for MessagingPostback {
     fn message_type(&self) -> MessagingType {
         MessagingType::POSTBACK(&self)
     }
@@ -134,7 +198,7 @@ pub struct MessagingMessage {
     botUser: &'static BotUser,
 }
 
-impl Messaging for MessagingMessage {
+impl<'a> Messaging for MessagingMessage {
     fn message_type(&self) -> MessagingType {
         MessagingType::MESSAGE(&self)
     }

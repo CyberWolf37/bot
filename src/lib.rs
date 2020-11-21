@@ -4,7 +4,7 @@
 
 mod utils;
 
-use utils::{Block, Conf, BotUser, Adder};
+use utils::{Block, Conf, BotUser, PipeBox, Messaging};
 
 pub struct BotMessenger {
     conf: Conf,
@@ -24,13 +24,39 @@ impl BotMessenger {
     }
 
     // Add conf struct
-    pub fn add<T>(&mut self, value: T) -> &mut Self where T: Adder {
-        value.add(self);
+    pub fn add_block(&mut self, value: Block) -> &mut Self {
+        self.blocks.push(value);
         self
     }
 
+    // Add user connection
+    pub fn add_user(&mut self, user: BotUser) -> &mut Self {
+        let pair =  self.get_connections().iter().enumerate().find(|x| x.1.get_sender() == user.get_sender());
+        match pair {
+            Some(u) => {
+                self.connections.remove(u.0);
+            }
+            None => {
+                self.connections.push(user);
+            }
+        }
+        
+        self
+    }
+
+    pub fn with_conf(&mut self, conf: Conf) -> &mut Self {
+        self.conf = conf;
+        self
+    }
+
+    // Launch server rocket
     pub fn launch(&self) {
         rocket::ignite();
+    }
+
+    // Getter Setter
+    fn get_connections(&self) -> &[BotUser] {
+        &self.connections
     }
 
 
