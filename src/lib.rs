@@ -1,7 +1,8 @@
-#![feature(plugin)]
-#![plugin(rocket_codegen)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] use rocket;
+#[macro_use] extern crate rocket;
+#[macro_use] extern crate rocket_contrib;
+#[macro_use] extern crate serde_json;
 
 mod utils;
 mod api;
@@ -9,6 +10,9 @@ mod api;
 use utils::{Block, Conf, BotUser, PipeBox, Messaging, CartBox};
 use api::*;
 use rocket_codegen;
+use rocket_contrib::json::{Json, JsonValue};
+use rocket::config::{Config, Environment};
+use rocket::http::RawStr;
 
 pub struct BotMessenger {
     conf: Conf,
@@ -54,8 +58,22 @@ impl BotMessenger {
 
     // Launch server rocket
     pub fn launch(&self) {
-        let route = format!("/{}",self.get_conf().get_uri());
-        rocket::ignite().mount(&route,routes![self.rootConnectio()]).launch();
+
+        let config = Config::build(Environment::Development)
+            .address(self.get_conf().get_ip())
+            .port(*self.get_conf().get_port())
+            .workers(*self.get_conf().get_workers())
+            .finalize();
+
+        match config {
+            Ok(e) => {
+                let route = format!("/{}",self.get_conf().get_uri());
+                rocket::custom(e).mount(&route,routes![root_connection]).launch();
+            }
+            Err(e) => panic!("Failed init config : {}", e)
+        }
+
+        
     }
 
     // Getter Setter
@@ -66,14 +84,19 @@ impl BotMessenger {
     pub fn get_conf(&self) -> &Conf {
         &self.conf
     }
+}
 
-    // route
-    #[get("/webhook")]
-    fn rootConnectio(&self) {
+// route
+#[get("/")]
+fn root_connection() -> &'static str {
+    "Hello World"
+}
 
-    }
-
-
+#[post("/" ,format = "json", data = "<message>")]
+fn root_message(message: Json<FBMessage>) -> &'static str {
+    let mess = FBMessage::from(message);
+    println!("{}",);
+    "Hello World"
 }
 
 #[cfg(test)]
@@ -90,5 +113,6 @@ mod tests {
         block.add(Box::new(CartBox::new("Hello")));
         bot.add_block(block);
         println!("{}",bot.get_conf());
+        bot.launch();
     }
 }

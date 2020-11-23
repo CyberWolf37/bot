@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::collections::hash_map::Iter;
 use std::fmt;
 use api::{Message, ApiMessage};
+use serde_json::de::Deserializer;
 
 pub enum MessagingType<'a> {
     POSTBACK(&'a MessagingPostback),
@@ -53,10 +54,10 @@ pub trait PipeBox {
 }
 
 pub struct Conf {
-    port: String,
+    port: u16,
     ip: String,
     uri: String,
-    workers: usize,
+    workers: u16,
     token_webhook: String,
     token_fb_page: String,
 }
@@ -70,9 +71,9 @@ impl fmt::Display for Conf {
 
 impl Conf {
     // New Conf struct
-    fn new(port: &str ,ip: &str ,uri: &str ,size: usize ,token_webhook: &str ,token_fb_page: &str) -> Self {
+    fn new(port: u16 ,ip: &str ,uri: &str ,size: u16 ,token_webhook: &str ,token_fb_page: &str) -> Self {
         Conf{
-            port: String::from(port),
+            port: port,
             ip: String::from(ip),
             uri: String::from(uri),
             workers: size,
@@ -93,8 +94,8 @@ impl Conf {
     }
 
     // set Vars conf
-    fn set_port(&mut self, port: &str) {
-        self.port = String::from(port);
+    fn set_port(&mut self, port: u16) {
+        self.port = port;
     }
 
     fn set_ip(&mut self, ip: &str) {
@@ -105,7 +106,7 @@ impl Conf {
         self.uri = String::from(uri);
     }
 
-    fn set_workers(&mut self, workers: usize) {
+    fn set_workers(&mut self, workers: u16) {
         self.workers = workers;
     }
 
@@ -117,15 +118,19 @@ impl Conf {
         &self.ip
     }
 
-    pub fn get_port(&self) -> &str {
+    pub fn get_port(&self) -> &u16 {
         &self.port
+    }
+
+    pub fn get_workers(&self) -> &u16 {
+        &self.workers
     }
 }
 
 impl Default for Conf {
     fn default() -> Self {
         Conf{
-            port: String::from("7878"),
+            port: 7878,
             ip: String::from("0.0.0.0"),
             uri: String::from("/webhook"),
             workers: 12,
