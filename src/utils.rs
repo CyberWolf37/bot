@@ -1,9 +1,22 @@
+use crate::api;
+
 use std::collections::HashMap;
 use std::collections::hash_map::Iter;
+use std::fmt;
+use api::{Message, ApiMessage};
 
 pub enum MessagingType<'a> {
     POSTBACK(&'a MessagingPostback),
     MESSAGE(&'a MessagingMessage),
+}
+
+impl fmt::Display for MessagingType<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MessagingType::POSTBACK(_) => write!(f,"POSTBACK"),
+            MessagingType::MESSAGE(_) => write!(f,"MESSAGE"),
+        }
+    }
 }
 
 pub enum PipeStatus {
@@ -12,10 +25,27 @@ pub enum PipeStatus {
     RESTART,
 }
 
+impl fmt::Display for PipeStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PipeStatus::NEXT => write!(f,"NEXT Status"),
+            PipeStatus::REPLAY => write!(f,"REPLAY Satus"),
+            PipeStatus::RESTART => write!(f,"NEXT Status"),
+        }
+    }
+}
+
 pub trait Messaging {
     fn message_type(&self) -> MessagingType;
     fn message(&self) -> &str;
     fn sender(&self) -> &BotUser;
+}
+
+impl fmt::Display for Messaging{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Message {}: {}"
+            ,self.message_type(), self.message())
+    }
 }
 
 pub trait PipeBox {
@@ -29,6 +59,13 @@ pub struct Conf {
     workers: usize,
     token_webhook: String,
     token_fb_page: String,
+}
+
+impl fmt::Display for Conf {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Configuration : \nPort: {}\nIp: {}\nURI: {}\nWorkers: {}\nToken webhook: {}\nToken FB: {}"
+            , self.port, self.ip, self.uri, self.workers, self.token_webhook, self.token_fb_page)
+    }
 }
 
 impl Conf {
@@ -54,6 +91,35 @@ impl Conf {
         self.token_fb_page = String::from(token);
         self
     }
+
+    // set Vars conf
+    fn set_port(&mut self, port: &str) {
+        self.port = String::from(port);
+    }
+
+    fn set_ip(&mut self, ip: &str) {
+        self.ip = String::from(ip);
+    }
+
+    fn set_uri(&mut self, uri: &str) {
+        self.uri = String::from(uri);
+    }
+
+    fn set_workers(&mut self, workers: usize) {
+        self.workers = workers;
+    }
+
+    pub fn get_uri(&self) -> &str {
+        &self.uri
+    }
+
+    pub fn get_ip(&self) -> &str {
+        &self.ip
+    }
+
+    pub fn get_port(&self) -> &str {
+        &self.port
+    }
 }
 
 impl Default for Conf {
@@ -74,6 +140,13 @@ pub struct BotUser {
     message: Box<dyn Messaging>,
 }
 
+impl fmt::Display for BotUser {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Bot User : [ Sender id: {}\r\n ,Message: {}]"
+            , self.sender_id, self.message)
+    }
+}
+
 impl PartialEq for BotUser {
     fn eq(&self, other: &Self) -> bool {
         self.sender_id == other.sender_id
@@ -86,6 +159,10 @@ impl BotUser {
             sender_id: String::from(id),
             message: message,
         }
+    }
+
+    pub fn send(message: Box<dyn Messaging>) {
+
     }
 
     pub fn get_sender(&self) -> &str {
@@ -161,17 +238,16 @@ impl Block {
     }
 
     // Setter
-    fn set_name(&mut self, name: &str) -> &mut Self{
+    pub fn set_name(&mut self, name: &str) -> &mut Self{
         self.name = String::from(name);
         self
     }
 
-    fn add(&mut self, pipeBox: Box<dyn PipeBox>) -> &mut Self {
+    pub fn add(&mut self, pipeBox: Box<dyn PipeBox>){
         self.pipe.push(pipeBox);
-        self
     }
 
-    fn iter(&self) -> Iter<'_,&BotUser,usize> {
+    pub fn iter(&self) -> Iter<'_,&BotUser,usize> {
         self.childs.iter()
     }
 }
@@ -207,5 +283,44 @@ impl<'a> Messaging for MessagingMessage {
     }
     fn sender(&self) -> &BotUser {
         &self.botUser
+    }
+}
+
+pub struct CartBox {
+    function_controle: Box<dyn Fn(&BotUser) -> Option<&BotUser> + Send + Sync>,
+    function_core: Box<dyn Fn(&BotUser) + Send + Sync>,
+}
+
+impl PipeBox for CartBox {
+    fn consume(&self,message: &BotUser) -> PipeStatus {
+        match (self.function_controle)(message) {
+            Some(e) => {
+                (self.function_core)(e);
+                PipeStatus::NEXT
+            }
+            None => {
+                PipeStatus::REPLAY
+            }
+        }
+    }
+}
+
+impl CartBox {
+    pub fn new(text: &'static str) -> Self {
+        let function_controle: Box<dyn Fn(&BotUser) -> Option<&BotUser> + Send + Sync> = Box::new(|u| {Some(u)});
+        let function_core: Box<dyn Fn(&BotUser) + Send + Sync> = Box::new(move |u| {Message::new(text).send(u)});
+
+        CartBox{
+            function_controle: function_controle,
+            function_core: function_core,
+        }
+    }
+
+    pub fn set_func_ctrl(&mut self,func: Box<dyn Fn(&BotUser) -> Option<&BotUser> + Send + Sync>){
+        self.function_controle = func;
+    }
+
+    pub fn set_func_core(&mut self, func: Box<dyn Fn(&BotUser) + Send + Sync>) {
+        self.function_core = func;
     }
 }

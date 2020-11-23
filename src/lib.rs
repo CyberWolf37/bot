@@ -1,10 +1,14 @@
-#![feature(proc_macro_hygiene, decl_macro)]
+#![feature(plugin)]
+#![plugin(rocket_codegen)]
 
 #[macro_use] use rocket;
 
 mod utils;
+mod api;
 
-use utils::{Block, Conf, BotUser, PipeBox, Messaging};
+use utils::{Block, Conf, BotUser, PipeBox, Messaging, CartBox};
+use api::*;
+use rocket_codegen;
 
 pub struct BotMessenger {
     conf: Conf,
@@ -31,11 +35,10 @@ impl BotMessenger {
 
     // Add user connection
     pub fn add_user(&mut self, user: BotUser) -> &mut Self {
-        let pair =  self.get_connections().iter().enumerate().find(|x| x.1.get_sender() == user.get_sender());
-        match pair {
-            Some(u) => {
+        match self.connections.iter().enumerate().find(|x| x.1.get_sender() == user.get_sender()) {
+            Some(u) => { 
                 self.connections.remove(u.0);
-            }
+            },
             None => {
                 self.connections.push(user);
             }
@@ -51,12 +54,23 @@ impl BotMessenger {
 
     // Launch server rocket
     pub fn launch(&self) {
-        rocket::ignite();
+        let route = format!("/{}",self.get_conf().get_uri());
+        rocket::ignite().mount(&route,routes![self.rootConnectio()]).launch();
     }
 
     // Getter Setter
-    fn get_connections(&self) -> &[BotUser] {
+    pub fn get_connections(&self) -> &[BotUser] {
         &self.connections
+    }
+
+    pub fn get_conf(&self) -> &Conf {
+        &self.conf
+    }
+
+    // route
+    #[get("/webhook")]
+    fn rootConnectio(&self) {
+
     }
 
 
@@ -64,8 +78,17 @@ impl BotMessenger {
 
 #[cfg(test)]
 mod tests {
+
+    use crate::BotMessenger;
+    use crate::utils;
+
+    use utils::{Block,CartBox};
     #[test]
     fn it_works() {
-        assert_eq!(2 + 2, 4);
+        let mut bot = BotMessenger::new();
+        let mut block = Block::new("Hello");
+        block.add(Box::new(CartBox::new("Hello")));
+        bot.add_block(block);
+        println!("{}",bot.get_conf());
     }
 }
