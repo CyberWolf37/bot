@@ -131,6 +131,14 @@ impl Conf {
     pub fn get_workers(&self) -> &u16 {
         &self.workers
     }
+
+    pub fn get_token_webhook(&self) -> &str {
+        &self.token_webhook
+    }
+
+    pub fn get_token_fb_page(&self) -> &str {
+        &self.token_fb_page
+    }
 }
 
 impl Default for Conf {

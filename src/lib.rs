@@ -15,6 +15,9 @@ use rocket::config::{Config, Environment};
 use rocket::http::RawStr;
 use rocket::State;
 use log::{info, warn, trace};
+use rocket::outcome::Outcome::*;
+use rocket::request::{self, Request, FromRequest};
+use rocket::request::Form;
 
 #[derive(Clone)]
 pub struct BotMessenger {
@@ -111,10 +114,28 @@ impl BotMessenger {
     }
 }
 
+#[derive(FromForm)]
+struct FbForm {
+    #[form(field = "hub.verify_token")]
+    verify_token: String,
+
+    #[form(field = "hub.challenge")]
+    challenge: String,
+
+    #[form(field = "hub.mode")]
+    mode: String,
+}
+
 // routes
-#[get("/")]
-fn root_connection() -> &'static str {
-    "Hello World"
+#[get("/?<hub..>")]
+fn root_connection(bot: State<BotMessenger>, hub: Form<FbForm>) -> String {
+    if hub.mode == "subscribe" && hub.verify_token == bot.get_conf().get_token_webhook() {
+        let s = hub.challenge.clone();
+        s
+    }
+    else {
+        "Sorry i don't understand".to_string()
+    }
 }
 
 #[post("/" ,format = "json", data = "<user>")]
