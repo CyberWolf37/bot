@@ -14,7 +14,7 @@ use rocket_contrib::json::{Json, JsonValue};
 use rocket::config::{Config, Environment};
 use rocket::http::RawStr;
 
-
+#[derive(Clone)]
 pub struct BotMessenger {
     conf: Conf,
     blocks: Vec<Block>,
@@ -60,6 +60,8 @@ impl BotMessenger {
     // Launch server rocket
     pub fn launch(&self) {
 
+        let bot = self.clone();
+
         let config = Config::build(Environment::Development)
             .address(self.get_conf().get_ip())
             .port(*self.get_conf().get_port())
@@ -69,7 +71,7 @@ impl BotMessenger {
         match config {
             Ok(e) => {
                 let route = format!("/{}",self.get_conf().get_uri());
-                rocket::custom(e).manage(self).mount(&route,routes![root_connection, root_message]).launch();
+                rocket::custom(e).manage(bot).mount(&route,routes![root_connection, root_message]).launch();
             }
             Err(e) => panic!("Failed init config : {}", e)
         }
@@ -106,11 +108,12 @@ mod tests {
     use crate::utils;
 
     use utils::{Block,CartBox};
+    use std::sync::Arc;
     #[test]
     fn it_works() {
         let mut bot = BotMessenger::new();
         let mut block = Block::new("Hello");
-        block.add(Box::new(CartBox::new("Hello")));
+        block.add(Arc::new(CartBox::new("Hello")));
         bot.add_block(block);
         println!("{}",bot.get_conf());
         bot.launch();

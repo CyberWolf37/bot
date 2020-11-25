@@ -144,9 +144,10 @@ impl Default for Conf {
     }
 }
 
+#[derive(Clone)]
 pub struct BotUser {
     sender_id: String,
-    message: Box<dyn Messaging + Send + Sync>,
+    message: Arc<dyn Messaging + Send + Sync>,
 }
 
 impl<'de> Deserialize<'de> for BotUser {
@@ -182,11 +183,11 @@ impl<'de> Deserialize<'de> for BotUser {
         };
 
         if let Some(i) = messageP {
-            return Ok(BotUser::new(&id, Box::new(i)));
+            return Ok(BotUser::new(&id, Arc::new(i)));
         }
         else {
             if let Some(i) = messageM {
-                return Ok(BotUser::new(&id, Box::new(i)));
+                return Ok(BotUser::new(&id, Arc::new(i)));
             }
             else{
                 return Err(de::Error::custom("Don't have Messaging or Postback value in json"));
@@ -209,7 +210,7 @@ impl PartialEq for BotUser {
 }
 
 impl BotUser {
-    pub fn new(id: &str ,message: Box<dyn Messaging  + Send + Sync>) -> Self {
+    pub fn new(id: &str ,message: Arc<dyn Messaging  + Send + Sync>) -> Self {
         BotUser{
             sender_id: String::from(id),
             message: message,
@@ -224,16 +225,16 @@ impl BotUser {
         &self.sender_id
     }
 
-    pub fn get_message(&self) -> &Box<dyn Messaging  + Send + Sync> {
-        &self.message
+    pub fn get_message(&self) -> Arc<dyn Messaging  + Send + Sync> {
+        self.message.clone()
     }
 }
 
-
+#[derive(Clone)]
 pub struct Block{
     name: String,
     childs: HashMap<&'static BotUser,usize>,
-    pipe: Vec<Box<dyn PipeBox  + Send + Sync>>,
+    pipe: Vec<Arc<dyn PipeBox  + Send + Sync>>,
 }
 
 impl Default for Block {
@@ -299,7 +300,7 @@ impl Block {
         self
     }
 
-    pub fn add(&mut self, pipeBox: Box<dyn PipeBox + Send + Sync>){
+    pub fn add(&mut self, pipeBox: Arc<dyn PipeBox + Send + Sync>){
         self.pipe.push(pipeBox);
     }
 
@@ -308,6 +309,7 @@ impl Block {
     }
 }
 
+#[derive(Clone)]
 pub struct MessagingPostback {
     payload: String,
     //botUser: &'static BotUser,
@@ -325,6 +327,7 @@ impl<'a> Messaging for MessagingPostback {
     }*/
 }
 
+#[derive(Clone)]
 pub struct MessagingMessage {
     text: String,
     //botUser: &'static BotUser,
@@ -342,9 +345,10 @@ impl<'a> Messaging for MessagingMessage {
     }*/
 }
 
+#[derive(Clone)]
 pub struct CartBox {
-    function_controle: Box<dyn Fn(&BotUser) -> Option<&BotUser> + Send + Sync>,
-    function_core: Box<dyn Fn(&BotUser) + Send + Sync>,
+    function_controle: Arc<dyn Fn(&BotUser) -> Option<&BotUser> + Send + Sync>,
+    function_core: Arc<dyn Fn(&BotUser) + Send + Sync>,
 }
 
 impl PipeBox for CartBox {
@@ -363,8 +367,8 @@ impl PipeBox for CartBox {
 
 impl CartBox {
     pub fn new(text: &'static str) -> Self {
-        let function_controle: Box<dyn Fn(&BotUser) -> Option<&BotUser> + Send + Sync> = Box::new(|u| {Some(u)});
-        let function_core: Box<dyn Fn(&BotUser) + Send + Sync> = Box::new(move |u| {Message::new(text).send(u)});
+        let function_controle: Arc<dyn Fn(&BotUser) -> Option<&BotUser> + Send + Sync> = Arc::new(|u| {Some(u)});
+        let function_core: Arc<dyn Fn(&BotUser) + Send + Sync> = Arc::new(move |u| {Message::new(text).send(u)});
 
         CartBox{
             function_controle: function_controle,
@@ -372,11 +376,11 @@ impl CartBox {
         }
     }
 
-    pub fn set_func_ctrl(&mut self,func: Box<dyn Fn(&BotUser) -> Option<&BotUser> + Send + Sync>){
+    pub fn set_func_ctrl(&mut self,func: Arc<dyn Fn(&BotUser) -> Option<&BotUser> + Send + Sync>){
         self.function_controle = func;
     }
 
-    pub fn set_func_core(&mut self, func: Box<dyn Fn(&BotUser) + Send + Sync>) {
+    pub fn set_func_core(&mut self, func: Arc<dyn Fn(&BotUser) + Send + Sync>) {
         self.function_core = func;
     }
 }
