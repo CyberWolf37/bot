@@ -4,7 +4,10 @@ use std::collections::HashMap;
 use std::collections::hash_map::Iter;
 use std::fmt;
 use api::{Message, ApiMessage};
-use serde_json::de::Deserializer;
+use serde::de::{self, Deserialize, Deserializer};
+use rocket_contrib::json::{Json, JsonValue};
+use serde_json::Value;
+use std::sync::Arc;
 
 pub enum MessagingType<'a> {
     POSTBACK(&'a MessagingPostback),
@@ -39,10 +42,10 @@ impl fmt::Display for PipeStatus {
 pub trait Messaging {
     fn message_type(&self) -> MessagingType;
     fn message(&self) -> &str;
-    fn sender(&self) -> &BotUser;
+    //fn sender(&self) -> &BotUser;
 }
 
-impl fmt::Display for Messaging{
+impl fmt::Display for dyn Messaging{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Message {}: {}"
             ,self.message_type(), self.message())
@@ -53,6 +56,7 @@ pub trait PipeBox {
     fn consume(&self,message: &BotUser) -> PipeStatus;
 }
 
+#[derive(Clone)]
 pub struct Conf {
     port: u16,
     ip: String,
@@ -142,13 +146,59 @@ impl Default for Conf {
 
 pub struct BotUser {
     sender_id: String,
-    message: Box<dyn Messaging>,
+    message: Box<dyn Messaging + Send + Sync>,
+}
+
+impl<'de> Deserialize<'de> for BotUser {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+
+        let json: Value =  Value::deserialize(deserializer)?;
+
+        let object: &String = match &json["object"] {
+            Value::String(e) if e == "page" => e,
+            _ => return Err(de::Error::custom("Doesn't have a valid json format API FB")),
+        };
+
+        let id = match &json["entry"][0]["messaging"][0]["sender"]["id"] {
+            Value::String(e) => e,
+            _ => return Err(de::Error::custom("Doesn't have a sender id in json")),
+        };
+
+        let messageP: Option<MessagingPostback> = match &json["entry"][0]["messaging"][0]["postback"]["payload"] {
+            Value::String(e) => {
+                Some(MessagingPostback{payload: e.clone()})
+            },
+            _ => None,
+        };
+        
+        let messageM: Option<MessagingMessage> = match &json["entry"][0]["messaging"][0]["message"]["text"] {
+            Value::String(e) => {
+                Some(MessagingMessage{text: e.clone()})
+            },
+            _ => None,
+        };
+
+        if let Some(i) = messageP {
+            return Ok(BotUser::new(&id, Box::new(i)));
+        }
+        else {
+            if let Some(i) = messageM {
+                return Ok(BotUser::new(&id, Box::new(i)));
+            }
+            else{
+                return Err(de::Error::custom("Don't have Messaging or Postback value in json"));
+            }
+        }
+    }
 }
 
 impl fmt::Display for BotUser {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Bot User : [ Sender id: {}\r\n ,Message: {}]"
-            , self.sender_id, self.message)
+        write!(f, "Bot User : [ Sender id: {} ]"
+            , self.sender_id, /*self.message*/)
     }
 }
 
@@ -159,7 +209,7 @@ impl PartialEq for BotUser {
 }
 
 impl BotUser {
-    pub fn new(id: &str ,message: Box<dyn Messaging>) -> Self {
+    pub fn new(id: &str ,message: Box<dyn Messaging  + Send + Sync>) -> Self {
         BotUser{
             sender_id: String::from(id),
             message: message,
@@ -174,15 +224,16 @@ impl BotUser {
         &self.sender_id
     }
 
-    pub fn get_message(&self) -> &Box<dyn Messaging> {
+    pub fn get_message(&self) -> &Box<dyn Messaging  + Send + Sync> {
         &self.message
     }
 }
 
+
 pub struct Block{
     name: String,
     childs: HashMap<&'static BotUser,usize>,
-    pipe: Vec<Box<dyn PipeBox>>,
+    pipe: Vec<Box<dyn PipeBox  + Send + Sync>>,
 }
 
 impl Default for Block {
@@ -248,7 +299,7 @@ impl Block {
         self
     }
 
-    pub fn add(&mut self, pipeBox: Box<dyn PipeBox>){
+    pub fn add(&mut self, pipeBox: Box<dyn PipeBox + Send + Sync>){
         self.pipe.push(pipeBox);
     }
 
@@ -259,7 +310,7 @@ impl Block {
 
 pub struct MessagingPostback {
     payload: String,
-    botUser: &'static BotUser,
+    //botUser: &'static BotUser,
 }
 
 impl<'a> Messaging for MessagingPostback {
@@ -269,14 +320,14 @@ impl<'a> Messaging for MessagingPostback {
     fn message(&self) -> &str {
         &self.payload
     }
-    fn sender(&self) -> &BotUser {
+    /*fn sender(&self) -> &BotUser {
         &self.botUser
-    }
+    }*/
 }
 
 pub struct MessagingMessage {
     text: String,
-    botUser: &'static BotUser,
+    //botUser: &'static BotUser,
 }
 
 impl<'a> Messaging for MessagingMessage {
@@ -286,9 +337,9 @@ impl<'a> Messaging for MessagingMessage {
     fn message(&self) -> &str {
         &self.text
     }
-    fn sender(&self) -> &BotUser {
+    /*fn sender(&self) -> &BotUser {
         &self.botUser
-    }
+    }*/
 }
 
 pub struct CartBox {

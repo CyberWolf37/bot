@@ -65,32 +65,3 @@ impl Message {
         self.token = token;
     }
 }
-
-// DESERIALISE MESSAGE FACEBOOK 
-
-#[derive(Serialize, Deserialize)]
-pub struct FBMessage {
-    pub object: String,
-    //pub entry: Vec<FBEntry>
-}
-
-impl fmt::Display for FBMessage{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "FBMessage {}"
-            ,self.object)
-    }
-}
-
-/*
-#[derive(Serialize, Deserialize)]
-pub struct FBEntry {
-    pub id: String,
-    pub time: usize,
-    pub messaging: Vec<FBMessaging>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct FBMessaging {
-
-}
-*/

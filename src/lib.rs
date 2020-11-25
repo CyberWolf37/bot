@@ -14,6 +14,7 @@ use rocket_contrib::json::{Json, JsonValue};
 use rocket::config::{Config, Environment};
 use rocket::http::RawStr;
 
+
 pub struct BotMessenger {
     conf: Conf,
     blocks: Vec<Block>,
@@ -68,7 +69,7 @@ impl BotMessenger {
         match config {
             Ok(e) => {
                 let route = format!("/{}",self.get_conf().get_uri());
-                rocket::custom(e).mount(&route,routes![root_connection]).launch();
+                rocket::custom(e).manage(self).mount(&route,routes![root_connection, root_message]).launch();
             }
             Err(e) => panic!("Failed init config : {}", e)
         }
@@ -86,16 +87,15 @@ impl BotMessenger {
     }
 }
 
-// route
+// routes
 #[get("/")]
 fn root_connection() -> &'static str {
     "Hello World"
 }
 
 #[post("/" ,format = "json", data = "<message>")]
-fn root_message(message: Json<FBMessage>) -> &'static str {
-    let mess = FBMessage::from(message);
-    println!("{}",);
+fn root_message(message: Json<BotUser>) -> &'static str {
+    println!("{}",*message);
     "Hello World"
 }
 
