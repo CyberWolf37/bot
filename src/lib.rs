@@ -23,7 +23,6 @@ use rocket::request::Form;
 pub struct BotMessenger {
     conf: Conf,
     blocks: Vec<Block>,
-    //connections: Vec<BotUser>,
 }
 
 impl BotMessenger {
@@ -33,7 +32,6 @@ impl BotMessenger {
         BotMessenger{
             conf: Conf::default(),
             blocks: Vec::new(),
-            //connections: Vec::new(),
         }
     }
 
@@ -103,11 +101,6 @@ impl BotMessenger {
 
         
     }
-
-    // Getter Setter
-    /*pub fn get_connections(&self) -> &[BotUser] {
-        &self.connections
-    }*/
 
     pub fn get_conf(&self) -> &Conf {
         &self.conf
