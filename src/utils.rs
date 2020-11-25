@@ -380,12 +380,8 @@ impl PipeBox for CartBox {
 }
 
 impl CartBox {
-    pub fn new(text: &'static str) -> Self {
+    pub fn new(function_core: Arc<dyn Fn(&BotUser) + Send + Sync>) -> Self {
         let function_controle: Arc<dyn Fn(&BotUser) -> Option<&BotUser> + Send + Sync> = Arc::new(|u| {Some(u)});
-        let function_core: Arc<dyn Fn(&BotUser) + Send + Sync> = Arc::new(move |u| {
-            info!("Sending message : {}", text);
-            Message::new(text).send(u)
-        });
 
         CartBox{
             function_controle: function_controle,
