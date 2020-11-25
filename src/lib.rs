@@ -14,6 +14,7 @@ use rocket_contrib::json::{Json, JsonValue};
 use rocket::config::{Config, Environment};
 use rocket::http::RawStr;
 use rocket::State;
+use log::{info, warn, trace};
 
 #[derive(Clone)]
 pub struct BotMessenger {
@@ -46,19 +47,21 @@ impl BotMessenger {
         });
         
         if let Some(i) = block_match {
+            info!("Message match with block");
             i.root(&user);
         }
         else {
             match self.blocks.iter_mut().enumerate().find(|x| {
-                match x.1.iter().find(|y| {y.0.get_sender() == user.get_sender()}) {
+                match x.1.find(&user) {
                     Some(_) => true,
                     None => false,
                 }}) {
-                Some(u) => { 
+                Some(u) => {
+                    info!("Find a user match in block");
                     u.1.root(&user);
                 },
                 None => {
-                    println!("Don't match with any of blocks");
+                    warn!("Don't match with any of blocks");
                 }
             } 
         }
@@ -117,7 +120,7 @@ fn root_connection() -> &'static str {
 #[post("/" ,format = "json", data = "<user>")]
 fn root_message(bot: State<BotMessenger> ,user: Json<BotUser>) -> &'static str {
     let mut bot: BotMessenger = bot.clone();
-    println!("{}",*user);
+    info!("New user: {}",*user);
     bot.add_user(user.clone());
     "Hello World"
 }
@@ -130,6 +133,7 @@ mod tests {
 
     use utils::{Block,CartBox};
     use std::sync::Arc;
+    use log::*;
     #[test]
     fn it_works() {
         let mut bot = BotMessenger::new();

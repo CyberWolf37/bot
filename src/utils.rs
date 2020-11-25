@@ -3,11 +3,13 @@ use crate::api;
 use std::collections::HashMap;
 use std::collections::hash_map::Iter;
 use std::fmt;
+use std::fmt::{Display};
 use api::{Message, ApiMessage};
 use serde::de::{self, Deserialize, Deserializer};
 use rocket_contrib::json::{Json, JsonValue};
 use serde_json::Value;
 use std::sync::Arc;
+use log::{info, warn, trace};
 
 pub enum MessagingType<'a> {
     POSTBACK(&'a MessagingPostback),
@@ -198,8 +200,8 @@ impl<'de> Deserialize<'de> for BotUser {
 
 impl fmt::Display for BotUser {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Bot User : [ Sender id: {} ]"
-            , self.sender_id, /*self.message*/)
+        write!(f, "Bot User : [ Sender id: {} , Sender Message: {} ]"
+            , self.sender_id, self.message.clone().message())
     }
 }
 
@@ -233,7 +235,7 @@ impl BotUser {
 #[derive(Clone)]
 pub struct Block{
     name: String,
-    childs: HashMap<&'static BotUser,usize>,
+    childs: Vec<(BotUser,usize)>,
     pipe: Vec<Arc<dyn PipeBox  + Send + Sync>>,
 }
 
@@ -241,7 +243,7 @@ impl Default for Block {
     fn default() -> Self {
         Block{
             name: String::from("Hello"),
-            childs: HashMap::new(),
+            childs: Vec::new(),
             pipe: Vec::new(),
         }
     }
@@ -258,19 +260,20 @@ impl Block {
 
     // Rooting user
     pub fn root(&mut self ,user: &BotUser) {
-        self.consume(user);
+        self.consume(user.clone());      
     }
 
     // Consume the PipeBox for the user
-    fn consume(&mut self ,user: &BotUser) {
+    fn consume(&mut self ,user: BotUser) {
         // find current user and is index
-        let pair = self.childs.iter_mut().find(|x| {*x.0 == user});
+        let pair = self.childs.iter_mut().find(|x| {x.0 == user});
 
         match pair {
             Some((_,value)) => {
+                info!("Match with pipebox");
                 match self.pipe.get(*value) {
                     Some(pipe_box) => {
-                        match pipe_box.consume(user) {
+                        match pipe_box.consume(&user) {
                             PipeStatus::NEXT => {
                                 if *value < self.pipe.len() {
                                     *value = *value + 1;
@@ -290,7 +293,13 @@ impl Block {
                     None => ()
                 }
             }
-            None => {}
+            None => { 
+                info!("Don't Match with any pipebox");
+                let user_cp = user.clone();
+                self.childs.push((user, 0));
+
+                self.pipe[0].consume(&user_cp);
+            }
         }
     }
 
@@ -308,8 +317,8 @@ impl Block {
         self.pipe.push(pipeBox);
     }
 
-    pub fn iter(&self) -> Iter<'_,&BotUser,usize> {
-        self.childs.iter()
+    pub fn find(&self,user: &BotUser) -> Option<&(BotUser,usize)> {
+        self.childs.iter().find(|x| x.0.get_sender() == user.get_sender())
     }
 }
 
@@ -357,6 +366,7 @@ pub struct CartBox {
 
 impl PipeBox for CartBox {
     fn consume(&self,message: &BotUser) -> PipeStatus {
+        info!("Consume in the block the pipebox");
         match (self.function_controle)(message) {
             Some(e) => {
                 (self.function_core)(e);
@@ -372,7 +382,10 @@ impl PipeBox for CartBox {
 impl CartBox {
     pub fn new(text: &'static str) -> Self {
         let function_controle: Arc<dyn Fn(&BotUser) -> Option<&BotUser> + Send + Sync> = Arc::new(|u| {Some(u)});
-        let function_core: Arc<dyn Fn(&BotUser) + Send + Sync> = Arc::new(move |u| {Message::new(text).send(u)});
+        let function_core: Arc<dyn Fn(&BotUser) + Send + Sync> = Arc::new(move |u| {
+            info!("Sending message : {}", text);
+            Message::new(text).send(u)
+        });
 
         CartBox{
             function_controle: function_controle,
