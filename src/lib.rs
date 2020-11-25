@@ -13,12 +13,13 @@ use rocket_codegen;
 use rocket_contrib::json::{Json, JsonValue};
 use rocket::config::{Config, Environment};
 use rocket::http::RawStr;
+use rocket::State;
 
 #[derive(Clone)]
 pub struct BotMessenger {
     conf: Conf,
     blocks: Vec<Block>,
-    connections: Vec<BotUser>,
+    //connections: Vec<BotUser>,
 }
 
 impl BotMessenger {
@@ -28,7 +29,7 @@ impl BotMessenger {
         BotMessenger{
             conf: Conf::default(),
             blocks: Vec::new(),
-            connections: Vec::new(),
+            //connections: Vec::new(),
         }
     }
 
@@ -40,14 +41,28 @@ impl BotMessenger {
 
     // Add user connection
     pub fn add_user(&mut self, user: BotUser) -> &mut Self {
-        match self.connections.iter().enumerate().find(|x| x.1.get_sender() == user.get_sender()) {
-            Some(u) => { 
-                self.connections.remove(u.0);
-            },
-            None => {
-                self.connections.push(user);
-            }
+        let block_match = self.blocks.iter_mut().find(|x| {
+            x.get_name() == user.get_message().message()
+        });
+        
+        if let Some(i) = block_match {
+            i.root(&user);
         }
+        else {
+            match self.blocks.iter_mut().enumerate().find(|x| {
+                match x.1.iter().find(|y| {y.0.get_sender() == user.get_sender()}) {
+                    Some(_) => true,
+                    None => false,
+                }}) {
+                Some(u) => { 
+                    u.1.root(&user);
+                },
+                None => {
+                    println!("Don't match with any of blocks");
+                }
+            } 
+        }
+        
         
         self
     }
@@ -55,6 +70,10 @@ impl BotMessenger {
     pub fn with_conf(&mut self, conf: Conf) -> &mut Self {
         self.conf = conf;
         self
+    }
+
+    pub fn rooting_user(&self, user: &BotUser) {
+
     }
 
     // Launch server rocket
@@ -80,9 +99,9 @@ impl BotMessenger {
     }
 
     // Getter Setter
-    pub fn get_connections(&self) -> &[BotUser] {
+    /*pub fn get_connections(&self) -> &[BotUser] {
         &self.connections
-    }
+    }*/
 
     pub fn get_conf(&self) -> &Conf {
         &self.conf
@@ -95,9 +114,11 @@ fn root_connection() -> &'static str {
     "Hello World"
 }
 
-#[post("/" ,format = "json", data = "<message>")]
-fn root_message(message: Json<BotUser>) -> &'static str {
-    println!("{}",*message);
+#[post("/" ,format = "json", data = "<user>")]
+fn root_message(bot: State<BotMessenger> ,user: Json<BotUser>) -> &'static str {
+    let mut bot: BotMessenger = bot.clone();
+    println!("{}",*user);
+    bot.add_user(user.clone());
     "Hello World"
 }
 

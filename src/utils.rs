@@ -300,6 +300,10 @@ impl Block {
         self
     }
 
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+
     pub fn add(&mut self, pipeBox: Arc<dyn PipeBox + Send + Sync>){
         self.pipe.push(pipeBox);
     }
