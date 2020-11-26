@@ -94,7 +94,8 @@ impl BotMessenger {
         match config {
             Ok(e) => {
                 let route = format!("/{}",self.get_conf().get_uri());
-                rocket::custom(e).manage(bot).mount(&route,routes![root_connection, root_message]).launch();
+                rocket::custom(e).manage(bot).mount(&route,routes![root_connection, root_message])
+                    .mount("/", routes![get_basic]).launch();
             }
             Err(e) => panic!("Failed init config : {}", e)
         }
@@ -140,6 +141,11 @@ fn root_message(bot: State<BotMessenger> ,user: Json<BotUser>) -> &'static str {
     let mut bot: BotMessenger = bot.clone();
     info!("New user: {}",*user);
     bot.add_user(user.clone());
+    "ok"
+}
+
+#[get("/")]
+fn get_basic() -> &'static str {
     "ok"
 }
 
