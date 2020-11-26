@@ -10,21 +10,17 @@ use serde::{Serialize, Deserialize};
 use std::fmt;
 
 pub trait ApiMessage {
-    fn send(&self, user: &BotUser);
+    fn send(&self, user: &BotUser, text: &str);
 }
 
 pub struct Message {
-    text: String,
-    token: &'static str,
+    token: String,
 }
 
 impl ApiMessage for Message {
-    fn send(&self, user: &BotUser) {
+    fn send(&self, user: &BotUser, text: &str) {
 
-        // Connect to FACEBOOK
-        let token = env::var("TOKEN_FB_PAGE").unwrap_or(String::new());
-
-        if token.is_empty() {
+        if self.token.is_empty() {
             warn!("Message doesn't have a access_token");
         }
         else {
@@ -37,10 +33,10 @@ impl ApiMessage for Message {
                 "message": {{
                 "text": "{}"
                 }}
-            }}"#,user.get_sender(),self.text));
+            }}"#,user.get_sender(),text));
             
             let request = Request::builder()
-                .uri(format!("https://graph.facebook.com/v9.0/me/messages?access_token={}",token))
+                .uri(format!("https://graph.facebook.com/v9.0/me/messages?access_token={}",self.token))
                 .header("User-Agent", "botMessenger/1.0")
                 .header("Content-type", "application/json")
                 .body(json);
@@ -54,14 +50,13 @@ impl ApiMessage for Message {
 }
 
 impl Message {
-    pub fn new(text: &str) -> Self {
+    pub fn new(token : &str) -> Self {
         Message{
-            text: String::from(text),
-            token: "",
+            token: String::from(token),
         }
     }
 
     pub fn set_token(&mut self,token: &'static str) {
-        self.token = token;
+        self.token = String::from(token);
     }
 }

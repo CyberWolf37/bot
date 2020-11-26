@@ -160,14 +160,14 @@ mod tests {
     use api::{Message,ApiMessage};
     use std::sync::Arc;
     use log::*;
+
     #[test]
     fn it_works() {
+        let message = Message::new("Mamaguriba");
         let mut bot = BotMessenger::new();
         let mut block = Block::new("Hello");
-        block.add(Arc::new(CartBox::new(Arc::new(|x: &BotUser| {
-           let mes = Message::new("Hello mother fucker");
-           info!("Bouya");
-           mes.send(x);
+        block.add(Arc::new(CartBox::new(Arc::new(move |x: &BotUser| {
+           message.send(x,"Hello mother fucker");
         }))));
         bot.add_block(block);
         println!("{}",bot.get_conf());
