@@ -163,7 +163,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let message = Message::new("Mamaguriba");
+        let message = Message::new("");
         let mut bot = BotMessenger::new();
         let mut block = Block::new("Hello");
         block.add(Arc::new(CartBox::new(Arc::new(move |x: &BotUser| {

@@ -1,13 +1,11 @@
 use crate::utils;
 
 use utils::{BotUser};
-use std::env;
 use log::*;
-use serde_json::*;
-use http::Request;
-use serde_derive::*;
 use serde::{Serialize, Deserialize};
 use std::fmt;
+use futures::executor::block_on;
+use ureq::*;
 
 pub trait ApiMessage {
     fn send(&self, user: &BotUser, text: &str);
@@ -24,27 +22,26 @@ impl ApiMessage for Message {
             warn!("Message doesn't have a access_token");
         }
         else {
-            let json = json!(format!(r#"
-            {{
-                "messaging_type": "RESPONSE",
-                "recipient": {{
-                "id": "{}"
-                }},
-                "message": {{
-                "text": "{}"
-                }}
-            }}"#,user.get_sender(),text));
-            
-            let request = Request::builder()
-                .uri(format!("https://graph.facebook.com/v9.0/me/messages?access_token={}",self.token))
-                .header("User-Agent", "botMessenger/1.0")
-                .header("Content-type", "application/json")
-                .body(json);
 
-            match request {
-                Ok(_) => info!("Send sucessful"),
-                Err(_) => warn!("Err of sending message"),
-            }
+            let url = format!("https://graph.facebook.com/v9.0/me/messages?access_token={}",self.token);
+            let resp = ureq::post(&url)
+                .send_json(self::json!(
+                    {
+                        "messaging_type": "RESPONSE",
+                        "recipient": {
+                            "id": user.get_sender()
+                        },
+                        "message": {
+                            "text": text
+                        }
+                    }
+                ));
+
+                if resp.ok() {
+                    println!("success: {}", resp.into_string().unwrap());
+                  } else {
+                    println!("error {}: {}", resp.status(), resp.into_string().unwrap());
+                  }
         }
     }
 }
