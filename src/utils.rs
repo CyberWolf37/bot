@@ -77,7 +77,7 @@ impl fmt::Display for Conf {
 
 impl Conf {
     // New Conf struct
-    fn new(port: u16 ,ip: &str ,uri: &str ,size: u16 ,token_webhook: &str ,token_fb_page: &str) -> Self {
+    pub fn new(port: u16 ,ip: &str ,uri: &str ,size: u16 ,token_webhook: &str ,token_fb_page: &str) -> Self {
         Conf{
             port: port,
             ip: String::from(ip),
@@ -89,30 +89,30 @@ impl Conf {
     }
 
     // Set Tokens
-    fn set_token_webhook(&mut self, token: &str) -> &mut Self {
+    pub fn set_token_webhook(&mut self, token: &str) -> &mut Self {
         self.token_webhook = String::from(token);
         self
     }
 
-    fn set_token_fb_page(&mut self, token: &str) -> &mut Self {
+    pub fn set_token_fb_page(&mut self, token: &str) -> &mut Self {
         self.token_fb_page = String::from(token);
         self
     }
 
     // set Vars conf
-    fn set_port(&mut self, port: u16) {
+    pub fn set_port(&mut self, port: u16) {
         self.port = port;
     }
 
-    fn set_ip(&mut self, ip: &str) {
+    pub fn set_ip(&mut self, ip: &str) {
         self.ip = String::from(ip);
     }
 
-    fn set_uri(&mut self, uri: &str) {
+    pub fn set_uri(&mut self, uri: &str) {
         self.uri = String::from(uri);
     }
 
-    fn set_workers(&mut self, workers: u16) {
+    pub fn set_workers(&mut self, workers: u16) {
         self.workers = workers;
     }
 

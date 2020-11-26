@@ -4,8 +4,8 @@
 #[macro_use] extern crate rocket_contrib;
 #[macro_use] extern crate serde_json;
 
-mod utils;
-mod api;
+pub mod utils;
+pub mod api;
 
 use utils::{Block, Conf, BotUser, PipeBox, Messaging, CartBox};
 use api::*;
@@ -136,7 +136,7 @@ fn root_message(bot: State<BotMessenger> ,user: Json<BotUser>) -> &'static str {
     let mut bot: BotMessenger = bot.clone();
     info!("New user: {}",*user);
     bot.add_user(user.clone());
-    "Hello World"
+    "ok"
 }
 
 #[cfg(test)]
