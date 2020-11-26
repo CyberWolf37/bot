@@ -102,8 +102,12 @@ impl BotMessenger {
         
     }
 
-    pub fn get_conf(&self) -> &Conf {
+    pub fn get_conf(& self) -> &Conf {
         &self.conf
+    }
+
+    pub fn get_conf_mut(&mut self) -> &mut Conf {
+        &mut self.conf
     }
 }
 
