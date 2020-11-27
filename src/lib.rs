@@ -7,16 +7,11 @@
 pub mod utils;
 pub mod api;
 
-use utils::{Block, Conf, BotUser, PipeBox, Messaging, CartBox};
-use api::*;
-use rocket_codegen;
-use rocket_contrib::json::{Json, JsonValue};
+use utils::{Block, Conf, BotUser};
+use rocket_contrib::json::{Json};
 use rocket::config::{Config, Environment};
-use rocket::http::RawStr;
 use rocket::State;
-use log::{info, warn, trace};
-use rocket::outcome::Outcome::*;
-use rocket::request::{self, Request, FromRequest};
+use log::{info, warn};
 use rocket::request::Form;
 
 #[derive(Clone)]
@@ -36,8 +31,11 @@ impl BotMessenger {
     }
 
     // Add conf struct
-    pub fn add_block(&mut self, value: Block) -> &mut Self {
-        self.blocks.push(value);
+    pub fn block(&'static mut self, value: Block) -> &'static Self {
+        let mut block = value;
+        let token = self.conf.get_token_fb_page();
+        block.set_token(token);
+        self.blocks.push(block);
         self
     }
 
@@ -81,9 +79,9 @@ impl BotMessenger {
     }
 
     // Launch server rocket
-    pub fn launch(&self) {
+    pub fn launch(&'static self) {
 
-        let bot = self.clone();
+        //let bot = self.clone();
 
         let config = Config::build(Environment::Development)
             .address(self.get_conf().get_ip())
@@ -94,7 +92,7 @@ impl BotMessenger {
         match config {
             Ok(e) => {
                 let route = format!("/{}",self.get_conf().get_uri());
-                rocket::custom(e).manage(bot).mount(&route,routes![root_connection, root_message])
+                rocket::custom(e).manage(self).mount(&route,routes![root_connection, root_message])
                     .mount("/", routes![get_basic]).launch();
             }
             Err(e) => panic!("Failed init config : {}", e)
@@ -157,20 +155,14 @@ mod tests {
     use crate::api;
 
     use utils::{Block,CartBox,BotUser};
-    use api::{Message,ApiMessage};
+    use api::{Message,ApiMessage}; 
     use std::sync::Arc;
     use log::*;
 
     #[test]
-    fn it_works() {
-        let message = Message::new("");
-        let mut bot = BotMessenger::new();
-        let mut block = Block::new("Hello");
-        block.add(Arc::new(CartBox::new(Arc::new(move |x: &BotUser| {
-           message.send(x,"Hello mother fucker");
-        }))));
-        bot.add_block(block);
-        println!("{}",bot.get_conf());
-        bot.launch();
+    fn it_works() { 
+        let mut  bot = BotMessenger::new();
+        bot.block(Block::new("Hello"))
+        .launch();
     }
 }

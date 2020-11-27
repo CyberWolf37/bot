@@ -1,6 +1,7 @@
 use crate::utils;
 
 use utils::{BotUser};
+use serde::ser::{Serialize ,Serializer};
 use log::{info, warn};
 use std::fmt;
 use ureq::*;
@@ -21,11 +22,24 @@ impl fmt::Display for MessagingType {
     }
 }
 
+impl Serialize for MessagingType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            MessagingType::RESPONSE => serializer.serialize_str("RESPONSE"),
+            MessagingType::UPDATE => serializer.serialize_str("UPDATE"),
+            MessagingType::MESSAGETAG => serializer.serialize_str("MESSAGE_TAG"),
+        }
+    }
+}
+
 pub trait ApiMessage {
     fn send(&self, user: &BotUser, token: &str);
 }
 
-#[derive(Clone)]
+
 pub struct Message {
     text: String,
 }
@@ -69,26 +83,8 @@ impl Message {
     }
 }
 
+#[derive(Clone)]
 pub struct Button {
-    text: String
-}
-
-pub struct MessageBuilder {
-    text: Option<String>,
-    buttons: Option<[Button]>,  
-}
-
-impl MessageBuilder {
-    pub fn message(text: &str) -> MessageBuilder {
-        MessageBuilder {
-            text: Some(String::from(text)),
-            buttons: None,
-        }
-    }
-
-    pub fn buttons(&self, buttons: [Button]) -> MessageBuilder {
-        let mut selfy = self;
-        selfy.buttons = Some(buttons);
-        self
-    }
+    pub text: String,
+    pub payload: String
 }

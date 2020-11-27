@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::collections::hash_map::Iter;
 use std::fmt;
 use std::fmt::{Display};
-use api::{Message, ApiMessage};
+use api::{Message, ApiMessage, Button};
 use serde::de::{self, Deserialize, Deserializer};
 use rocket_contrib::json::{Json, JsonValue};
 use serde_json::Value;
@@ -55,7 +55,7 @@ impl fmt::Display for dyn Messaging{
 }
 
 pub trait PipeBox {
-    fn consume(&self,message: &BotUser) -> PipeStatus;
+    fn consume(&self,message: &BotUser, token: &str) -> PipeStatus;
 }
 
 #[derive(Clone)]
@@ -243,14 +243,16 @@ impl BotUser {
 #[derive(Clone)]
 pub struct Block{
     name: String,
+    token: &'static str,
     childs: Vec<(BotUser,usize)>,
-    pipe: Vec<Arc<dyn PipeBox  + Send + Sync>>,
+    pipe: Vec<Arc<dyn PipeBox + Send + Sync>>,
 }
 
 impl Default for Block {
     fn default() -> Self {
         Block{
             name: String::from("Hello"),
+            token: "",
             childs: Vec::new(),
             pipe: Vec::new(),
         }
@@ -281,7 +283,7 @@ impl Block {
                 info!("Match with pipebox");
                 match self.pipe.get(*value) {
                     Some(pipe_box) => {
-                        match pipe_box.consume(&user) {
+                        match pipe_box.consume(&user, self.token) {
                             PipeStatus::NEXT => {
                                 if *value < self.pipe.len() {
                                     *value = *value + 1;
@@ -306,7 +308,7 @@ impl Block {
                 let user_cp = user.clone();
                 self.childs.push((user, 0));
 
-                self.pipe[0].consume(&user_cp);
+                self.pipe[0].consume(&user_cp, self.token);
             }
         }
     }
@@ -317,12 +319,17 @@ impl Block {
         self
     }
 
+    pub fn set_token(&mut self, token: &'static str) {
+        self.token = token
+    }
+
     pub fn get_name(&self) -> &str {
         &self.name
     }
 
-    pub fn add(&mut self, pipeBox: Arc<dyn PipeBox + Send + Sync>){
-        self.pipe.push(pipeBox);
+    pub fn cartBox<T: 'static + PipeBox + Send + Sync> (&mut self, pipeBox: T) -> &mut Self {
+        self.pipe.push(Arc::new(pipeBox));
+        self
     }
 
     pub fn find(&self,user: &BotUser) -> Option<&(BotUser,usize)> {
@@ -359,21 +366,19 @@ impl<'a> Messaging for MessagingMessage {
 }
 
 #[derive(Clone)]
-pub struct CartBox<T> where T: ApiMessage{
+pub struct CartBox {
     function_controle: Arc<dyn Fn(&BotUser) -> Option<&BotUser> + Send + Sync>,
-    function_core: Arc<dyn Fn(&BotUser) -> Option<T> + Send + Sync>,
+
+    text: Option<String>,
+    button: Option<Vec<Button>>,
 }
 
-impl<T> PipeBox for CartBox<T> where T: ApiMessage{
-    fn consume(&self,message: &BotUser) -> PipeStatus {
+impl PipeBox for CartBox{
+    fn consume(&self,message: &BotUser, token: &str) -> PipeStatus {
         info!("Consume in the block the pipebox");
         match (self.function_controle)(message) {
             Some(e) => {
-                let respond = (self.function_core)(e);
-                match respond {
-                    Some(elem) => elem.send(e),
-                    None => ()
-                }
+                self.build().send(message,token);
                 PipeStatus::NEXT
             }
             None => {
@@ -384,20 +389,51 @@ impl<T> PipeBox for CartBox<T> where T: ApiMessage{
 }
 
 impl CartBox {
-    pub fn new(function_core: Arc<dyn Fn(&BotUser) + Send + Sync>) -> Self {
+    pub fn new() -> Self {
         let function_controle: Arc<dyn Fn(&BotUser) -> Option<&BotUser> + Send + Sync> = Arc::new(|u| {Some(u)});
-
         CartBox{
             function_controle: function_controle,
-            function_core: function_core,
+
+            text: None,
+            button: None
         }
     }
 
-    pub fn set_func_ctrl(&mut self,func: Arc<dyn Fn(&BotUser) -> Option<&BotUser> + Send + Sync>){
+    pub fn text(&mut self,text: &str) -> &mut Self {
+        self.text = Some(String::from(text));
+        self
+    }
+
+    pub fn button(&mut self,button_text: &str ,button_payload: &str) -> &mut Self {
+        match &mut self.button {
+            Some(e) => {e.push(Button{
+                text: String::from(button_text),
+                payload: String::from(button_payload)
+            })},
+            None => {
+                let mut buttons = Vec::new();
+                buttons.push(Button{
+                    text:String::from(button_text) ,
+                    payload: String::from(button_payload),
+                });
+
+                self.button = Some(buttons);
+            },
+        }
+        self
+    }
+
+
+    pub fn with_func_ctrl(&mut self,func: Arc<dyn Fn(&BotUser) -> Option<&BotUser> + Send + Sync>){
         self.function_controle = func;
     }
 
-    pub fn set_func_core(&mut self, func: Arc<dyn Fn(&BotUser) + Send + Sync>) {
-        self.function_core = func;
+    fn build(&self) -> Box<dyn ApiMessage> {
+        let text = &self.text;
+        match text.as_ref() {
+            Some(t) => Box::new(Message::new(t.as_str())),
+            None => Box::new(Message::new("Basic Text")),
+        }
+        
     }
 }
