@@ -1,59 +1,94 @@
 use crate::utils;
 
 use utils::{BotUser};
-use log::*;
-use serde::{Serialize, Deserialize};
+use log::{info, warn};
 use std::fmt;
-use futures::executor::block_on;
 use ureq::*;
 
-pub trait ApiMessage {
-    fn send(&self, user: &BotUser, text: &str);
+pub enum MessagingType {
+    RESPONSE,
+    UPDATE,
+    MESSAGETAG,
 }
 
+impl fmt::Display for MessagingType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MessagingType::RESPONSE => write!(f,"RESPONSE"),
+            MessagingType::UPDATE => write!(f,"UPDATE"),
+            MessagingType::MESSAGETAG => write!(f,"MESSAGE_TAG"),
+        }
+    }
+}
+
+pub trait ApiMessage {
+    fn send(&self, user: &BotUser, token: &str);
+}
+
+#[derive(Clone)]
 pub struct Message {
-    token: String,
+    text: String,
 }
 
 impl ApiMessage for Message {
-    fn send(&self, user: &BotUser, text: &str) {
+    fn send(&self, user: &BotUser, token: &str) {
 
-        if self.token.is_empty() {
+        if token.is_empty() {
             warn!("Message doesn't have a access_token");
         }
         else {
 
-            let url = format!("https://graph.facebook.com/v9.0/me/messages?access_token={}",self.token);
+            let url = format!("https://graph.facebook.com/v9.0/me/messages?access_token={}",token);
             let resp = ureq::post(&url)
                 .send_json(self::json!(
                     {
-                        "messaging_type": "RESPONSE",
+                        "messaging_type": MessagingType::RESPONSE,
                         "recipient": {
                             "id": user.get_sender()
                         },
                         "message": {
-                            "text": text
+                            "text": self.text
                         }
                     }
                 ));
 
                 if resp.ok() {
-                    println!("success: {}", resp.into_string().unwrap());
+                    info!("success: {}", resp.into_string().unwrap());
                   } else {
-                    println!("error {}: {}", resp.status(), resp.into_string().unwrap());
+                    warn!("error {}: {}", resp.status(), resp.into_string().unwrap());
                   }
         }
     }
 }
 
 impl Message {
-    pub fn new(token : &str) -> Self {
+    pub fn new(text : &str) -> Self {
         Message{
-            token: String::from(token),
+            text: String::from(text),
+        }
+    }
+}
+
+pub struct Button {
+    text: String
+}
+
+pub struct MessageBuilder {
+    text: Option<String>,
+    buttons: Option<[Button]>,  
+}
+
+impl MessageBuilder {
+    pub fn message(text: &str) -> MessageBuilder {
+        MessageBuilder {
+            text: Some(String::from(text)),
+            buttons: None,
         }
     }
 
-    pub fn set_token(&mut self,token: &'static str) {
-        self.token = String::from(token);
+    pub fn buttons(&self, buttons: [Button]) -> MessageBuilder {
+        let mut selfy = self;
+        selfy.buttons = Some(buttons);
+        self
     }
 }

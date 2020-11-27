@@ -333,7 +333,6 @@ impl Block {
 #[derive(Clone)]
 pub struct MessagingPostback {
     payload: String,
-    //botUser: &'static BotUser,
 }
 
 impl<'a> Messaging for MessagingPostback {
@@ -343,15 +342,11 @@ impl<'a> Messaging for MessagingPostback {
     fn message(&self) -> &str {
         &self.payload
     }
-    /*fn sender(&self) -> &BotUser {
-        &self.botUser
-    }*/
 }
 
 #[derive(Clone)]
 pub struct MessagingMessage {
     text: String,
-    //botUser: &'static BotUser,
 }
 
 impl<'a> Messaging for MessagingMessage {
@@ -361,23 +356,24 @@ impl<'a> Messaging for MessagingMessage {
     fn message(&self) -> &str {
         &self.text
     }
-    /*fn sender(&self) -> &BotUser {
-        &self.botUser
-    }*/
 }
 
 #[derive(Clone)]
-pub struct CartBox {
+pub struct CartBox<T> where T: ApiMessage{
     function_controle: Arc<dyn Fn(&BotUser) -> Option<&BotUser> + Send + Sync>,
-    function_core: Arc<dyn Fn(&BotUser) + Send + Sync>,
+    function_core: Arc<dyn Fn(&BotUser) -> Option<T> + Send + Sync>,
 }
 
-impl PipeBox for CartBox {
+impl<T> PipeBox for CartBox<T> where T: ApiMessage{
     fn consume(&self,message: &BotUser) -> PipeStatus {
         info!("Consume in the block the pipebox");
         match (self.function_controle)(message) {
             Some(e) => {
-                (self.function_core)(e);
+                let respond = (self.function_core)(e);
+                match respond {
+                    Some(elem) => elem.send(e),
+                    None => ()
+                }
                 PipeStatus::NEXT
             }
             None => {
