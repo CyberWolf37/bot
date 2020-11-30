@@ -13,11 +13,14 @@ use rocket::config::{Config, Environment};
 use rocket::State;
 use log::{info, warn};
 use rocket::request::Form;
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[derive(Clone)]
 pub struct BotMessenger {
     conf: Conf,
     blocks: Vec<Block>,
+    counter: usize,
 }
 
 impl Drop for BotMessenger {
@@ -33,6 +36,7 @@ impl BotMessenger {
         BotMessenger{
             conf: Conf::default(),
             blocks: Vec::new(),
+            counter: 0,
         }
     }
 
@@ -95,6 +99,14 @@ impl BotMessenger {
 
     }
 
+    pub fn count(&mut self) {
+        self.counter = self.counter +1;
+    }
+
+    pub fn get_count(&self) -> &usize {
+        &self.counter
+    }
+
     // Launch server rocket
     pub fn launch(&self) {
 
@@ -106,8 +118,8 @@ impl BotMessenger {
             .workers(*self.get_conf().get_workers())
             .finalize();
 
-        let selfy = self.clone();
-        println!("Token {}",selfy.get_conf().get_token_fb_page());
+        let selfy = Arc::new(Mutex::new(self.clone()));
+        //println!("Token {}",selfy.get_conf().get_token_fb_page());
 
         match config {
             Ok(e) => {
@@ -146,7 +158,9 @@ struct FbForm {
 
 // routes
 #[get("/?<hub..>")]
-fn root_connection(bot: State<BotMessenger>, hub: Form<FbForm>) -> String {
+fn root_connection(bot: State<Arc<Mutex<BotMessenger>>>, hub: Form<FbForm>) -> String {
+    let bot = bot.clone();
+    let bot = bot.lock().unwrap();
     if hub.mode == "subscribe" && hub.verify_token == bot.get_conf().get_token_webhook() {
         let s = hub.challenge.clone();
         s
@@ -157,8 +171,9 @@ fn root_connection(bot: State<BotMessenger>, hub: Form<FbForm>) -> String {
 }
 
 #[post("/" ,format = "json", data = "<user>")]
-fn root_message(bot: State<BotMessenger> ,user: Json<BotUser>) -> &'static str {
-    let mut bot: BotMessenger = bot.clone();
+fn root_message(bot: State<Arc<Mutex<BotMessenger>>> ,user: Json<BotUser>) -> &'static str {
+    let bot = bot.clone();
+    let bot = &mut bot.lock().unwrap();
     info!("New user: {}",*user);
     bot.add_user(user.clone());
     "ok"
@@ -192,5 +207,5 @@ mod tests {
             .with_token_fb("EAAKAw0ggVncBAIux8WOG4JnbbWCHJvFOeKK5yMZC3TwZAPaypjicgXH69plFsp28r0KyEwlWGFntOEEM2sNatIQFZCtuY3zSl98V6VRmvQBwwGXVZBfNq8gECNweZBR7oSwqdtTtbGiOaVRo05PzUYiHoMKPSuz6IE8EGOovzvAZDZD")
             .with_token_wh("MamaGuriba")
             .launch();
-    }
+    }  
 }
