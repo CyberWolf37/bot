@@ -89,14 +89,12 @@ impl Conf {
     }
 
     // Set Tokens
-    pub fn set_token_webhook(&mut self, token: &str) -> &mut Self {
+    pub fn set_token_webhook(&mut self, token: &str) {
         self.token_webhook = String::from(token);
-        self
     }
 
-    pub fn set_token_fb_page(&mut self, token: &str) -> &mut Self {
+    pub fn set_token_fb_page(&mut self, token: &str) {
         self.token_fb_page = String::from(token);
-        self
     }
 
     // set Vars conf
@@ -243,7 +241,7 @@ impl BotUser {
 #[derive(Clone)]
 pub struct Block{
     name: String,
-    token: &'static str,
+    token: String,
     childs: Vec<(BotUser,usize)>,
     pipe: Vec<Arc<dyn PipeBox + Send + Sync>>,
 }
@@ -252,7 +250,7 @@ impl Default for Block {
     fn default() -> Self {
         Block{
             name: String::from("Hello"),
-            token: "",
+            token: String::from(""),
             childs: Vec::new(),
             pipe: Vec::new(),
         }
@@ -283,7 +281,7 @@ impl Block {
                 info!("Match with pipebox");
                 match self.pipe.get(*value) {
                     Some(pipe_box) => {
-                        match pipe_box.consume(&user, self.token) {
+                        match pipe_box.consume(&user, &self.token) {
                             PipeStatus::NEXT => {
                                 if *value < self.pipe.len() {
                                     *value = *value + 1;
@@ -307,8 +305,9 @@ impl Block {
                 info!("Don't Match with any pipebox");
                 let user_cp = user.clone();
                 self.childs.push((user, 0));
+                println!("In Block we have {} childs", self.childs.len());
 
-                self.pipe[0].consume(&user_cp, self.token);
+                self.pipe[0].consume(&user_cp, &self.token);
             }
         }
     }
@@ -319,21 +318,25 @@ impl Block {
         self
     }
 
-    pub fn set_token(&mut self, token: &'static str) {
-        self.token = token
+    pub fn set_token(&mut self, token: &str) {
+        self.token = String::from(token);
     }
 
     pub fn get_name(&self) -> &str {
         &self.name
     }
 
-    pub fn cartBox<T: 'static + PipeBox + Send + Sync> (&mut self, pipeBox: T) -> &mut Self {
+    pub fn cartBox<T: 'static + PipeBox + Send + Sync> (mut self, pipeBox: T) -> Self {
         self.pipe.push(Arc::new(pipeBox));
         self
     }
 
     pub fn find(&self,user: &BotUser) -> Option<&(BotUser,usize)> {
-        self.childs.iter().find(|x| x.0.get_sender() == user.get_sender())
+        println!("Search bot user childs have {}",self.childs.len());
+        self.childs.iter().find(|x| {
+            println!("BotUser in block : {}",user);
+            x.0.get_sender() == user.get_sender()
+        })
     }
 }
 
@@ -399,7 +402,7 @@ impl CartBox {
         }
     }
 
-    pub fn text(&mut self,text: &str) -> &mut Self {
+    pub fn text(mut self,text: &str) -> Self {
         self.text = Some(String::from(text));
         self
     }

@@ -20,6 +20,12 @@ pub struct BotMessenger {
     blocks: Vec<Block>,
 }
 
+impl Drop for BotMessenger {
+    fn drop(&mut self) {
+        println!("> Dropping BotMessenger");
+    }
+}
+
 impl BotMessenger {
 
     // New BotMessenger struct
@@ -31,11 +37,10 @@ impl BotMessenger {
     }
 
     // Add conf struct
-    pub fn block(&'static mut self, value: Block) -> &'static Self {
+    pub fn block(mut self, value: Block) -> Self {
         let mut block = value;
-        let token = self.conf.get_token_fb_page();
-        block.set_token(token);
-        self.blocks.push(block);
+        block.set_token(self.get_conf().get_token_fb_page());
+        self.add_block(block);
         self
     }
 
@@ -54,13 +59,14 @@ impl BotMessenger {
                 match x.1.find(&user) {
                     Some(_) => true,
                     None => false,
-                }}) {
-                Some(u) => {
-                    info!("Find a user match in block");
-                    u.1.root(&user);
+                }}) 
+                {
+                    Some(u) => {
+                        info!("Find a user match in block");
+                        u.1.root(&user);
                 },
-                None => {
-                    warn!("Don't match with any of blocks");
+                    None => {
+                        warn!("Don't match with any of blocks");
                 }
             } 
         }
@@ -69,8 +75,19 @@ impl BotMessenger {
         self
     }
 
-    pub fn with_conf(&mut self, conf: Conf) -> &mut Self {
+    pub fn with_conf(mut self, conf: Conf) -> Self {
         self.conf = conf;
+        self
+    }
+
+    pub fn with_token_fb(mut self, token: &str) -> Self {
+        self.conf.set_token_fb_page(token);
+        self.blocks.iter_mut().for_each(|x| x.set_token(token));
+        self
+    }
+
+    pub fn with_token_wh(mut self, token: &str) -> Self {
+        self.conf.set_token_webhook(token);
         self
     }
 
@@ -79,7 +96,7 @@ impl BotMessenger {
     }
 
     // Launch server rocket
-    pub fn launch(&'static self) {
+    pub fn launch(&self) {
 
         //let bot = self.clone();
 
@@ -89,24 +106,29 @@ impl BotMessenger {
             .workers(*self.get_conf().get_workers())
             .finalize();
 
+        let selfy = self.clone();
+        println!("Token {}",selfy.get_conf().get_token_fb_page());
+
         match config {
             Ok(e) => {
                 let route = format!("/{}",self.get_conf().get_uri());
-                rocket::custom(e).manage(self).mount(&route,routes![root_connection, root_message])
+                rocket::custom(e).manage(selfy).mount(&route,routes![root_connection, root_message])
                     .mount("/", routes![get_basic]).launch();
             }
             Err(e) => panic!("Failed init config : {}", e)
-        }
-
-        
+        } 
     }
 
-    pub fn get_conf(& self) -> &Conf {
+    pub fn get_conf(&self) -> &Conf {
         &self.conf
     }
 
     pub fn get_conf_mut(&mut self) -> &mut Conf {
         &mut self.conf
+    }
+
+    pub fn add_block(&mut self, block: Block){
+        self.blocks.push(block);
     }
 }
 
@@ -154,15 +176,21 @@ mod tests {
     use crate::utils;
     use crate::api;
 
-    use utils::{Block,CartBox,BotUser};
-    use api::{Message,ApiMessage}; 
-    use std::sync::Arc;
-    use log::*;
+    use utils::{Block,CartBox};
 
     #[test]
     fn it_works() { 
-        let mut  bot = BotMessenger::new();
-        bot.block(Block::new("Hello"))
-        .launch();
+        BotMessenger::new()
+            .block(Block::new("Hello")
+                .cartBox(CartBox::new()
+                    .text("Hello new user"))
+                .cartBox(CartBox::new()
+                    .text("It's a new day")))
+            .block(Block::new("#Start")
+                .cartBox(CartBox::new()
+                    .text("New start user")))
+            .with_token_fb("EAAKAw0ggVncBAIux8WOG4JnbbWCHJvFOeKK5yMZC3TwZAPaypjicgXH69plFsp28r0KyEwlWGFntOEEM2sNatIQFZCtuY3zSl98V6VRmvQBwwGXVZBfNq8gECNweZBR7oSwqdtTtbGiOaVRo05PzUYiHoMKPSuz6IE8EGOovzvAZDZD")
+            .with_token_wh("MamaGuriba")
+            .launch();
     }
 }
