@@ -268,14 +268,13 @@ impl Block {
 
     // Rooting user
     pub fn root(&mut self ,user: &BotUser) {
-        //self.consume(user.clone());
-        let pair = self.childs.iter_mut().find(|x| {x.0 == *user});
+        let find = self.find(user);
 
-        match pair {
-            Some(e) => {
-                self.consume(user);
-            }
-            None => {
+        match find {
+            true => {
+                self.consume(user)
+            },
+            false => {
                 self.childs.push((user.clone(),0));
                 self.consume(user);
             }
@@ -284,40 +283,29 @@ impl Block {
 
     // Consume the PipeBox for the user
     fn consume(&mut self ,user: &BotUser) {
-
-        let mut pair: Option<&mut (BotUser,usize)> = None;
-        {
-            let childs = self.get_childs();
-            pair = childs.iter_mut().find(|x| {x.0 == *user});
-        }
-        
-        self.test(pair);
+        self.iter_mut().find(|x| {x.0 == *user})     
     }
 
-    fn test(&mut self, pair: Option<&mut (BotUser, usize)>)
+    fn test(&mut self, pair: &(BotUser, usize)) -> usize
     {
-        match pair {
-            Some(pair) => {
-                match self.pipe[pair.1].consume(&pair.0, &self.token) {
-                    PipeStatus::NEXT => {
-                        if pair.1 < self.pipe.len() {
-                            pair.1 = pair.1 + 1;
-                        }
-                        else if pair.1 == self.pipe.len(){
-                            pair.1 = 0
-                        }
-                    }
-                    PipeStatus::REPLAY => {
-                        // Nothing to do
-                    }
-                    PipeStatus::RESTART => {
-                        pair.1 = 0
-                    }
+        match self.pipe[pair.1].consume(&pair.0, &self.token) {
+            PipeStatus::NEXT => {
+                if pair.1 < self.pipe.len() {
+                    return pair.1 + 1;
+                }
+                else if pair.1 == self.pipe.len() {
+                    return 0
+                }
+                else {
+                    return 0
                 }
             },
-            None => { 
-                warn!("No user referenced");      
-            }
+            PipeStatus::REPLAY => {
+                return pair.1
+            },
+            PipeStatus::RESTART => {
+                return 0
+            }, 
         }
     }
 
@@ -344,10 +332,21 @@ impl Block {
         self
     }
 
-    pub fn find(&self,user: &BotUser) -> Option<&(BotUser,usize)> {
-        println!("Search bot user childs have {}",self.childs.len());
-        self.childs.iter().find(|x| {
-            println!("BotUser in block : {}",user);
+    pub fn find(&self,user: &BotUser) -> bool {
+        match self.childs.iter().find(|x| {
+            x.0.get_sender() == user.get_sender()
+        }) {
+            Some(_) => {
+                return true
+            }
+            None => {
+                return false
+            }
+        }
+    }
+
+    pub fn find_mut(&mut self,user: &BotUser) -> Option<&mut (BotUser,usize)> {
+        self.childs.iter_mut().find(|x| {
             x.0.get_sender() == user.get_sender()
         })
     }

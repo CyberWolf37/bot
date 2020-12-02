@@ -58,10 +58,7 @@ impl BotMessenger {
         }
         else {
             match self.blocks.iter_mut().enumerate().find(|x| {
-                match x.1.find(&user) {
-                    Some(_) => true,
-                    None => false,
-                }}) 
+                x.1.find(&user)}) 
                 {
                     Some(u) => {
                         info!("Find a user match in block");
