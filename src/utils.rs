@@ -268,46 +268,55 @@ impl Block {
 
     // Rooting user
     pub fn root(&mut self ,user: &BotUser) {
-        self.consume(user.clone());      
+        //self.consume(user.clone());
+        let pair = self.childs.iter_mut().find(|x| {x.0 == *user});
+
+        match pair {
+            Some(e) => {
+                self.consume(user);
+            }
+            None => {
+                self.childs.push((user.clone(),0));
+                self.consume(user);
+            }
+        }
     }
 
     // Consume the PipeBox for the user
-    fn consume(&mut self ,user: BotUser) {
-        // find current user and is index
-        let pair = self.childs.iter_mut().find(|x| {x.0 == user});
+    fn consume(&mut self ,user: &BotUser) {
 
+        let mut pair: Option<&mut (BotUser,usize)> = None;
+        {
+            let childs = self.get_childs();
+            pair = childs.iter_mut().find(|x| {x.0 == *user});
+        }
+        
+        self.test(pair);
+    }
+
+    fn test(&mut self, pair: Option<&mut (BotUser, usize)>)
+    {
         match pair {
-            Some((_,value)) => {
-                info!("Match with pipebox");
-                match self.pipe.get(*value) {
-                    Some(pipe_box) => {
-                        match pipe_box.consume(&user, &self.token) {
-                            PipeStatus::NEXT => {
-                                if *value < self.pipe.len() {
-                                    *value = *value + 1;
-                                }
-                                else if *value == self.pipe.len(){
-                                    *value = 0;
-                                }
-                            }
-                            PipeStatus::REPLAY => {
-                                // Nothing to do
-                            }
-                            PipeStatus::RESTART => {
-                                *value = 0;
-                            }
-                        };
+            Some(pair) => {
+                match self.pipe[pair.1].consume(&pair.0, &self.token) {
+                    PipeStatus::NEXT => {
+                        if pair.1 < self.pipe.len() {
+                            pair.1 = pair.1 + 1;
+                        }
+                        else if pair.1 == self.pipe.len(){
+                            pair.1 = 0
+                        }
                     }
-                    None => ()
+                    PipeStatus::REPLAY => {
+                        // Nothing to do
+                    }
+                    PipeStatus::RESTART => {
+                        pair.1 = 0
+                    }
                 }
-            }
+            },
             None => { 
-                info!("Don't Match with any pipebox");
-                let user_cp = user.clone();
-                self.childs.push((user, 0));
-                println!("In Block we have {} childs", self.childs.len());
-
-                self.pipe[0].consume(&user_cp, &self.token);
+                warn!("No user referenced");      
             }
         }
     }
@@ -324,6 +333,10 @@ impl Block {
 
     pub fn get_name(&self) -> &str {
         &self.name
+    }
+
+    pub fn get_childs(&mut self) -> &mut [(BotUser,usize)] {
+        &mut self.childs
     }
 
     pub fn cartBox<T: 'static + PipeBox + Send + Sync> (mut self, pipeBox: T) -> Self {
@@ -381,7 +394,7 @@ impl PipeBox for CartBox{
         info!("Consume in the block the pipebox");
         match (self.function_controle)(message) {
             Some(e) => {
-                self.build().send(message,token);
+                self.build().send(e,token);
                 PipeStatus::NEXT
             }
             None => {

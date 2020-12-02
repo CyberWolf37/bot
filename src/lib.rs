@@ -20,7 +20,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 pub struct BotMessenger {
     conf: Conf,
     blocks: Vec<Block>,
-    counter: usize,
 }
 
 impl Drop for BotMessenger {
@@ -36,7 +35,6 @@ impl BotMessenger {
         BotMessenger{
             conf: Conf::default(),
             blocks: Vec::new(),
-            counter: 0,
         }
     }
 
@@ -74,8 +72,7 @@ impl BotMessenger {
                 }
             } 
         }
-        
-        
+
         self
     }
 
@@ -97,14 +94,6 @@ impl BotMessenger {
 
     pub fn rooting_user(&self, user: &BotUser) {
 
-    }
-
-    pub fn count(&mut self) {
-        self.counter = self.counter +1;
-    }
-
-    pub fn get_count(&self) -> &usize {
-        &self.counter
     }
 
     // Launch server rocket
@@ -166,7 +155,7 @@ fn root_connection(bot: State<Arc<Mutex<BotMessenger>>>, hub: Form<FbForm>) -> S
         s
     }
     else {
-        "Sorry i don't understand".to_string()
+        "Sorry I don't understand".to_string()
     }
 }
 
