@@ -285,64 +285,42 @@ impl Block {
 
     // Consume the PipeBox for the user
     fn consume(&mut self ,user: &BotUser) {
-        let mut childs = self.childs.clone();
-        let childs = Arc::make_mut(&mut childs);
 
-        match childs.iter_mut().find(|x| {x.0 == *user}) {
+        let value = match (*Arc::make_mut(&mut self.childs)).iter_mut().enumerate().find(|x| {x.1.0 == *user}) {
             Some(x) => {
-                match self.pipe[x.1].consume(user, &self.token) {
+                match self.pipe[x.1.1].consume(user, &self.token) {
                     PipeStatus::NEXT => {
-                        if x.1 < self.pipe.len() {
-                            x.1 = x.1 + 1;
+                        x.1.1 = x.1.1 + 1;
+                        if x.1.1 >= self.pipe.len() {
+                            Some(x.0)
                         }
-                        else if x.1 == self.pipe.len() {
-                            x.1 = 0;
+                        else {
+                            None
                         }
                     },
                     PipeStatus::REPLAY => {
-                        x.1 = 0;
+                        x.1.1 = 0;
+                        None
                     },
                     PipeStatus::RESTART => {
-                        x.1 = 0;
+                        x.1.1 = 0;
+                        None
                     },
                 }
             }
             None => {
                 warn!("Don't match with any childs");
+                None
             }
-        }
-    }
+        };
 
-    fn test(&mut self, pair: &(BotUser, usize)) -> usize
-    {
-        match self.get_pipe()[pair.1].consume(&pair.0, &self.token) {
-            PipeStatus::NEXT => {
-                if pair.1 < self.pipe.len() {
-                    return pair.1 + 1;
-                }
-                else if pair.1 == self.pipe.len() {
-                    return 0
-                }
-                else {
-                    return 0
-                }
+        match value {
+            Some(e) => {
+                (*Arc::make_mut(&mut self.childs)).remove(e);
             },
-            PipeStatus::REPLAY => {
-                return pair.1
-            },
-            PipeStatus::RESTART => {
-                return 0
-            }, 
+            None => {}
         }
-    }
 
-    fn set_childs(&mut self,user: &BotUser,value: usize) {
-
-        (*Arc::make_mut(&mut self.childs)).iter_mut().map(|x| {
-            if x.0 == *user {
-                x.1 = value
-            }
-        });
     }
 
     // Setter
@@ -385,6 +363,23 @@ impl Block {
         (*Arc::make_mut(&mut self.childs)).iter_mut().find(|x| {
             x.0.get_sender() == user.get_sender()
         })
+    }
+
+    pub fn remove_child(&mut self,user: &BotUser) {
+        let child = (*Arc::make_mut(&mut self.childs)).iter_mut().enumerate().find(|x| {
+            x.1.0.get_sender() == user.get_sender()
+        });
+
+        let child = match child {
+            Some(e) => Some(e.0),
+            None => None,
+        };
+
+        match child {
+            Some(e) => {(*Arc::make_mut(&mut self.childs)).remove(e);},
+            None => {},
+        }
+
     }
 }
 
