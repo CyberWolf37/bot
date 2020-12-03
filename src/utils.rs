@@ -10,6 +10,7 @@ use rocket_contrib::json::{Json, JsonValue};
 use serde_json::Value;
 use std::sync::Arc;
 use log::{info, warn, trace};
+use std::rc::Rc;
 
 pub enum MessagingType<'a> {
     POSTBACK(&'a MessagingPostback),
@@ -242,7 +243,7 @@ impl BotUser {
 pub struct Block{
     name: String,
     token: String,
-    childs: Vec<(BotUser,usize)>,
+    childs: Arc<Vec<(BotUser,usize)>>,
     pipe: Vec<Arc<dyn PipeBox + Send + Sync>>,
 }
 
@@ -251,7 +252,7 @@ impl Default for Block {
         Block{
             name: String::from("Hello"),
             token: String::from(""),
-            childs: Vec::new(),
+            childs: Arc::new(Vec::new()),
             pipe: Vec::new(),
         }
     }
@@ -275,7 +276,8 @@ impl Block {
                 self.consume(user)
             },
             false => {
-                self.childs.push((user.clone(),0));
+
+                (*Arc::make_mut(&mut self.childs)).push((user.clone(),0));
                 self.consume(user);
             }
         }
@@ -283,12 +285,37 @@ impl Block {
 
     // Consume the PipeBox for the user
     fn consume(&mut self ,user: &BotUser) {
-        self.iter_mut().find(|x| {x.0 == *user})     
+        let mut childs = self.childs.clone();
+        let childs = Arc::make_mut(&mut childs);
+
+        match childs.iter_mut().find(|x| {x.0 == *user}) {
+            Some(x) => {
+                match self.pipe[x.1].consume(user, &self.token) {
+                    PipeStatus::NEXT => {
+                        if x.1 < self.pipe.len() {
+                            x.1 = x.1 + 1;
+                        }
+                        else if x.1 == self.pipe.len() {
+                            x.1 = 0;
+                        }
+                    },
+                    PipeStatus::REPLAY => {
+                        x.1 = 0;
+                    },
+                    PipeStatus::RESTART => {
+                        x.1 = 0;
+                    },
+                }
+            }
+            None => {
+                warn!("Don't match with any childs");
+            }
+        }
     }
 
     fn test(&mut self, pair: &(BotUser, usize)) -> usize
     {
-        match self.pipe[pair.1].consume(&pair.0, &self.token) {
+        match self.get_pipe()[pair.1].consume(&pair.0, &self.token) {
             PipeStatus::NEXT => {
                 if pair.1 < self.pipe.len() {
                     return pair.1 + 1;
@@ -309,6 +336,15 @@ impl Block {
         }
     }
 
+    fn set_childs(&mut self,user: &BotUser,value: usize) {
+
+        (*Arc::make_mut(&mut self.childs)).iter_mut().map(|x| {
+            if x.0 == *user {
+                x.1 = value
+            }
+        });
+    }
+
     // Setter
     pub fn set_name(&mut self, name: &str) -> &mut Self{
         self.name = String::from(name);
@@ -323,8 +359,8 @@ impl Block {
         &self.name
     }
 
-    pub fn get_childs(&mut self) -> &mut [(BotUser,usize)] {
-        &mut self.childs
+    pub fn get_pipe(&self) -> &[Arc<dyn PipeBox + Send + Sync>] {
+        &self.pipe
     }
 
     pub fn cartBox<T: 'static + PipeBox + Send + Sync> (mut self, pipeBox: T) -> Self {
@@ -346,7 +382,7 @@ impl Block {
     }
 
     pub fn find_mut(&mut self,user: &BotUser) -> Option<&mut (BotUser,usize)> {
-        self.childs.iter_mut().find(|x| {
+        (*Arc::make_mut(&mut self.childs)).iter_mut().find(|x| {
             x.0.get_sender() == user.get_sender()
         })
     }
