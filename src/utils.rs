@@ -450,22 +450,20 @@ impl CartBox {
         self
     }
 
-    pub fn button(&mut self,button_text: &str ,button_payload: &str) -> &mut Self {
+    pub fn button_postback(mut self,button_text: &str ,button_payload: &str) -> Self {
+        println!("Go head");
         match &mut self.button {
-            Some(e) => {e.push(Button{
-                text: String::from(button_text),
-                payload: String::from(button_payload)
-            })},
+            Some(e) => {e.push(Button::new_button_pb(button_text, button_payload));println!("Done")},
             None => {
                 let mut buttons = Vec::new();
-                buttons.push(Button{
-                    text:String::from(button_text) ,
-                    payload: String::from(button_payload),
-                });
+                buttons.push(Button::new_button_pb(button_text, button_payload));
 
                 self.button = Some(buttons);
+                println!("UNDone");
             },
         }
+
+        println!("Go neither");
         self
     }
 
@@ -476,10 +474,21 @@ impl CartBox {
 
     fn build(&self) -> Box<dyn ApiMessage> {
         let text = &self.text;
-        match text.as_ref() {
+        let button = &self.button;
+        if text.is_some() && button.is_some() {
+            Box::new(Message::new(Some(text.clone().unwrap()),Some(button.clone().unwrap())))
+        }
+        else if text.is_some() && button.is_none() {
+            Box::new(Message::new(Some(text.clone().unwrap()),None))
+        }
+        else {
+            Box::new(Message::new(Some(String::from("Basic Text")),None))
+        }
+
+        /*match text.as_ref() {
             Some(t) => Box::new(Message::new(t.as_str())),
             None => Box::new(Message::new("Basic Text")),
-        }
+        }*/
         
     }
 }
