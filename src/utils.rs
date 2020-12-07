@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::collections::hash_map::Iter;
 use std::fmt;
 use std::fmt::{Display};
-use api::{Message, ApiMessage, Button};
+use api::{Message, ApiMessage, Button, Card};
 use serde::de::{self, Deserialize, Deserializer};
 use rocket_contrib::json::{Json, JsonValue};
 use serde_json::Value;
@@ -417,6 +417,7 @@ pub struct CartBox {
 
     text: Option<String>,
     button: Option<Vec<Button>>,
+    cards: Option<Vec<Card>>,
 }
 
 impl PipeBox for CartBox{
@@ -467,6 +468,9 @@ impl CartBox {
         self
     }
 
+    pub fn card(mut self, card: Card) -> Self {
+
+    }
 
     pub fn with_func_ctrl(&mut self,func: Arc<dyn Fn(&BotUser) -> Option<&BotUser> + Send + Sync>){
         self.function_controle = func;
@@ -483,12 +487,6 @@ impl CartBox {
         }
         else {
             Box::new(Message::new(Some(String::from("Basic Text")),None))
-        }
-
-        /*match text.as_ref() {
-            Some(t) => Box::new(Message::new(t.as_str())),
-            None => Box::new(Message::new("Basic Text")),
-        }*/
-        
+        }     
     }
 }
