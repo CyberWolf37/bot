@@ -30,13 +30,6 @@ impl Drop for BotMessenger {
 
 impl BotMessenger {
 
-    // New BotMessenger struct
-    pub fn new() -> Self {
-        BotMessenger{
-            conf: Conf::default(),
-            blocks: Vec::new(),
-        }
-    }
 
     // Add conf struct
     pub fn block(mut self, value: Block) -> Self {
@@ -176,8 +169,10 @@ mod tests {
 
     use crate::BotMessenger;
     use crate::utils;
+    use crate::api;
 
     use utils::{Block,CartBox};
+    use api::{Card,Button};
 
     #[test]
     fn it_works() { 
@@ -190,8 +185,8 @@ mod tests {
                     .button_postback("Push", "Hello"))
                 .cartBox(CartBox::new()
                     .card(Card::new("Hello")
-                        .button_postback("Push", "Hello")
-                        .image("URL")
+                        .button(Button::new_button_pb("Welcom back Mr potter", "#Youpie"))
+                        .image("https://images.ladepeche.fr/api/v1/images/view/5c34fb833e454650457f60ce/large/image.jpg")
                         .subtitle("Bouyah"))))
             .block(Block::new("#Start")
                 .cartBox(CartBox::new()

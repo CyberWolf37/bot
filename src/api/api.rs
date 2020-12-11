@@ -108,99 +108,11 @@ impl ApiMessage for Message {
 }
 
 impl Message {
-    pub fn new(text : Option<String>,buttons: Option<Vec<Button>>) -> Self {
+    pub fn new(text : Option<String>,buttons: Option<Vec<Button>>, cards: Option<Vec<Card>>) -> Self {
         Message{
             text: text,
             buttons: buttons,
+            cards: cards
         }
-    }
-}
-
-#[derive(Clone)]
-pub enum Button {
-    PAYLOAD(String,String),
-    URL(String,String),
-}
-
-impl Serialize for Button {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        match self {
-            Button::PAYLOAD(name,payload) => serializer.serialize_str(&format!("{{\"content_type\":\"text\",\"title\":\"{}\",\"payload\":\"{}\"}}",name,payload)),
-            Button::URL(name,url) => {
-                serializer.serialize_str(&format!("
-                    {{
-                        \"type\":\"web_url\",
-                        \"url\":\"{}\",
-                        \"title\":\"{}\",
-                        \"webview_height_ratio\": \"compact\",
-                        \"messenger_extensions\": \"false\",
-                    }}",url,name))
-            },
-        }
-    }
-}
-
-impl Button {
-    pub fn new_button_pb(name: &str, postback: &str) -> Button {
-        Button::PAYLOAD(String::from(name),String::from(postback))
-    }
-    pub fn new_button_url(name: &str, url: &str) -> Button {
-        Button::PAYLOAD(String::from(name),String::from(url))
-    }
-}
-
-#[derive(Clone)]
-pub struct Card {
-    title: String,
-    subtitle: Option<String>,
-    image_url: Option<String>,
-    buttons: Option<Vec<Button>>,
-    default_action: Option<String> // Accept an url. When the card was tapped we send an url
-}
-
-impl Serialize for Card {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str("Card")
-    }
-}
-
-impl Card {
-    pub fn new(title: &str) -> Self {
-        Card{
-            title: String::from(title),
-            subtitle: None,
-            image_url: None,
-            buttons: None,
-            default_action: None,
-        }
-    }
-
-    pub fn subtitle(mut self, subtitle: &str) -> Self {
-        self.subtitle = Some(String::from(subtitle));
-        self
-    }
-
-    pub fn image_url(mut self, url: &str) -> Self {
-        self.image_url = Some(String::from(url));
-        self
-    }
-
-    pub fn default_action(mut self, url: &str) -> Self {
-        self.default_action = Some(String::from(url));
-        self
-    }
-
-    pub fn button(mut self, button: Button) -> Self {
-        match self.buttons {
-            Some(e) => e.push(button),
-            None => self.buttons = Some(vec!(button))
-        }
-        self
     }
 }
