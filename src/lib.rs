@@ -7,7 +7,8 @@
 pub mod utils;
 pub mod api;
 
-use utils::{Block, Conf, BotUser};
+use utils::{Conf, BotUser};
+use utils::block::Block;
 use rocket_contrib::json::{Json};
 use rocket::config::{Config, Environment};
 use rocket::State;
@@ -171,8 +172,9 @@ mod tests {
     use crate::utils;
     use crate::api;
 
-    use utils::{Block,CartBox};
-    use api::{Card,Button};
+    use utils::block::{Block,CartBox};
+    use api::card::Card;
+    use api::button::Button;
 
     #[test]
     fn it_works() { 

@@ -1,7 +1,18 @@
+use serde::ser::{Serialize, Serializer};
+use std::vec::Vec;
+use std::fmt;
+
+
 #[derive(Clone)]
 pub enum Button {
     PAYLOAD(String,String),
     URL(String,String),
+}
+
+impl fmt::Display for Button {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "(button, button)")
+    }
 }
 
 impl Serialize for Button {
