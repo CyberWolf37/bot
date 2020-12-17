@@ -1,6 +1,6 @@
 use super::button::Button;
-use serde::ser::{Serialize, Serializer};
-
+use serde::ser::{Serialize, Serializer, SerializeSeq};
+use std::marker::Copy;
 
 #[derive(Clone)]
 pub struct Card {
@@ -13,16 +13,32 @@ pub struct Card {
 
 impl Serialize for Card {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
+
+    where S: Serializer,
     {
         let mut s = String::from("");
-        s.push_str(&format!(r#""attachment":{{
+        s.push_str(r#""attachment":{{
             "type":"template",
             "payload":{{
               "template_type":"generic",
-              "elements":{})"#,self.buttons.unwrap()));
-              
+              "elements":)"#);
+
+
+        match &self.buttons {
+            Some(e) => {
+                s.push('[');
+                for elem in e {
+                    s.push_str(&elem.to_json_str());
+                    s.push(',');
+                }
+
+                s.push(']');
+            }
+            None => {
+                s.push_str("none");
+            }
+        }
+
         serializer.serialize_str(s.as_str())
     }
 }

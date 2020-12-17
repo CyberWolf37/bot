@@ -40,7 +40,24 @@ impl Button {
     pub fn new_button_pb(name: &str, postback: &str) -> Button {
         Button::PAYLOAD(String::from(name),String::from(postback))
     }
+
     pub fn new_button_url(name: &str, url: &str) -> Button {
         Button::PAYLOAD(String::from(name),String::from(url))
+    }
+
+    pub fn to_json_str(&self) -> String {
+        match self {
+            Button::PAYLOAD(name,payload) => format!("{{\"content_type\":\"text\",\"title\":\"{}\",\"payload\":\"{}\"}}",name,payload),
+            Button::URL(name,url) => {
+                format!("
+                    {{
+                        \"type\":\"web_url\",
+                        \"url\":\"{}\",
+                        \"title\":\"{}\",
+                        \"webview_height_ratio\": \"compact\",
+                        \"messenger_extensions\": \"false\",
+                    }}",url,name)
+            },
+        }
     }
 }

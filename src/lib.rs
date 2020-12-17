@@ -7,15 +7,14 @@
 pub mod utils;
 pub mod api;
 
-use utils::{Conf, BotUser};
 use utils::block::Block;
+use utils::{Conf, BotUser};
 use rocket_contrib::json::{Json};
 use rocket::config::{Config, Environment};
 use rocket::State;
 use log::{info, warn};
 use rocket::request::Form;
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[derive(Clone)]
 pub struct BotMessenger {
@@ -31,6 +30,13 @@ impl Drop for BotMessenger {
 
 impl BotMessenger {
 
+    // New BotMessenger struct
+    pub fn new() -> Self {
+        BotMessenger {
+            conf: Conf::default(),
+            blocks: Vec::new(),
+        }
+    }
 
     // Add conf struct
     pub fn block(mut self, value: Block) -> Self {
@@ -172,7 +178,9 @@ mod tests {
     use crate::utils;
     use crate::api;
 
-    use utils::block::{Block,CartBox};
+
+    use utils::block::Block;
+    use utils::block::CartBox;
     use api::card::Card;
     use api::button::Button;
 
