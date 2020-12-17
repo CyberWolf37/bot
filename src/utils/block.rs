@@ -222,14 +222,19 @@ impl CartBox {
     fn build(&self) -> Box<dyn ApiMessage> {
         let text = &self.text;
         let button = &self.button;
+        let cards = &self.cards;
+
         if text.is_some() && button.is_some() {
             Box::new(Message::new(Some(text.clone().unwrap()),Some(button.clone().unwrap()),None))
         }
         else if text.is_some() && button.is_none() {
             Box::new(Message::new(Some(text.clone().unwrap()),None,None))
         }
+        else if cards.is_some() {
+            Box::new(Message::new(None,None,cards.clone()))
+        }
         else {
             Box::new(Message::new(Some(String::from("Basic Text")),None,None))
-        }     
+        }
     }
 }

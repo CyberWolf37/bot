@@ -201,8 +201,8 @@ mod tests {
             .block(Block::new("#Start")
                 .cartBox(CartBox::new()
                     .text("New start user")))
-            .with_token_fb("MamaGuriba")
+            .with_token_fb("EAAKAw0ggVncBAIux8WOG4JnbbWCHJvFOeKK5yMZC3TwZAPaypjicgXH69plFsp28r0KyEwlWGFntOEEM2sNatIQFZCtuY3zSl98V6VRmvQBwwGXVZBfNq8gECNweZBR7oSwqdtTtbGiOaVRo05PzUYiHoMKPSuz6IE8EGOovzvAZDZD")
             .with_token_wh("MamaGuriba")
             .launch();
-    }  
+    }
 }
