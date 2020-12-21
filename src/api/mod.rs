@@ -41,7 +41,6 @@ impl Serialize for MessagingType {
 
 pub trait ApiMessage {
     fn send(&self, user: &BotUser, token: &str);
-    //fn build(&self) -> Option<&[String]>;
 }
 
 #[derive(Clone)]
@@ -51,40 +50,27 @@ pub struct Message {
     cards: Option<Vec<Card>>,
 }
 
-/*impl Serialize for Message {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut s = String::from("{");
-
-        if self.text.is_some() {
-            s.push_str(format!("\"text\": \"{}\",",self.text.unwrap()))
-        }
-        else if self.buttons.is_some() {
-            s.push_str("\"quick_replies\":[");
-            self.buttons.unwrap().iter().for_each(|x| {
-                s.push_str(format!("{}",x.serialize().unwrap()));
-                s.push(',');
-            })
-        }
-        else {
-            eprint!("Error don't have data to serialize")
-        }
-
-        serializer.serialize_str(&s)
-    }
-}*/
-
 impl ApiMessage for Message {
     fn send(&self, user: &BotUser, token: &str) {
+
+        fn send_json(value: serde_json::Value, token: &str) {
+            let url = format!("https://graph.facebook.com/v9.0/me/messages?access_token={}",token);
+            info!("Json value : {}",value.to_string());
+            let resp = ureq::post(&url)
+                .send_json(value);
+
+                if resp.ok() {
+                    info!("success: {}", resp.into_string().unwrap());
+                  } else {
+                    warn!("error {}: {}", resp.status(), resp.into_string().unwrap());
+                  }
+        }
 
         if token.is_empty() {
             warn!("Message doesn't have a access_token");
         }
-        else {
-
-            let url = format!("https://graph.facebook.com/v9.0/me/messages?access_token={}",token);
+        else if self.text.is_some() {
+            
             let json =  self::json!(
                 {
                     "messaging_type": MessagingType::RESPONSE,
@@ -97,15 +83,22 @@ impl ApiMessage for Message {
                     }
                 }
             );
-            info!("Json value : {}",json);
-            let resp = ureq::post(&url)
-                .send_json(json);
-
-                if resp.ok() {
-                    info!("success: {}", resp.into_string().unwrap());
-                  } else {
-                    warn!("error {}: {}", resp.status(), resp.into_string().unwrap());
-                  }
+            send_json(json,token);
+        }
+        else if self.cards.is_some() {
+            let card =  self.cards.as_ref();
+            let json =  self::json!(
+                {
+                    "messaging_type": MessagingType::RESPONSE,
+                    "recipient": {
+                        "id": user.get_sender()
+                    },
+                    "message": {
+                        "attachment": card.unwrap()[0]
+                    }
+                }
+            );
+            send_json(json,token);
         }
     }
 }

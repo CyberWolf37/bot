@@ -15,16 +15,19 @@ impl Serialize for Card {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
 
     where S: Serializer,
-    {
-        let mut s = String::from("");
-        s.push_str(r#""attachment":{{
-            "type":"template",
-            "payload":{{
-              "template_type":"generic",
-              "elements":)"#);
+    {      
+        let mut s = format!(r#"{{"title":"{}""#
+        ,self.title);
 
+        if self.subtitle.is_some() {
+           s.push_str( &format!(r#","subtitle":"{}""#, self.subtitle.as_ref().unwrap()) );
+        }
 
-        match &self.buttons {
+        if self.image_url.is_some() {
+            s.push_str( &format!(r#","image_url":"{}""#, self.image_url.as_ref().unwrap()) );
+        }     
+
+        match self.buttons.as_ref() {
             Some(e) => {
                 s.push('[');
                 for elem in e {
