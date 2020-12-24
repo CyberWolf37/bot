@@ -20,6 +20,7 @@ use std::sync::{Arc, Mutex};
 pub struct BotMessenger {
     conf: Conf,
     blocks: Vec<Block>,
+    block_default: Block,
 }
 
 impl Drop for BotMessenger {
@@ -35,6 +36,7 @@ impl BotMessenger {
         BotMessenger {
             conf: Conf::default(),
             blocks: Vec::new(),
+            block_default: Block::default(),
         }
     }
 
@@ -43,6 +45,13 @@ impl BotMessenger {
         let mut block = value;
         block.set_token(self.get_conf().get_token_fb_page());
         self.add_block(block);
+        self
+    }
+
+    pub fn block_default(mut self, value: Block) -> Self {
+        let mut block = value;
+        block.set_token(self.get_conf().get_token_fb_page());
+        self.block_default = block;
         self
     }
 
@@ -67,6 +76,7 @@ impl BotMessenger {
                 },
                     None => {
                         warn!("Don't match with any of blocks");
+                        self.block_default.root(&user);
                 }
             } 
         }
@@ -82,6 +92,7 @@ impl BotMessenger {
     pub fn with_token_fb(mut self, token: &str) -> Self {
         self.conf.set_token_fb_page(token);
         self.blocks.iter_mut().for_each(|x| x.set_token(token));
+        self.block_default.set_token(token);
         self
     }
 
@@ -193,6 +204,9 @@ mod tests {
     #[test]
     fn it_works() { 
         BotMessenger::new()
+            .block_default(Block::new("default")
+                .cartBox(CartBox::new()
+                    .text("Sorry I don't understand 🐻")))
             .block(Block::new("Hello")
                 .cartBox(CartBox::new()
                     .text("Hello new user"))
