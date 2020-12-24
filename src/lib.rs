@@ -90,6 +90,11 @@ impl BotMessenger {
         self
     }
 
+    pub fn with_port(mut self, port: u16) -> Self {
+        self.conf.set_port(port);
+        self
+    }
+
     pub fn rooting_user(&self, user: &BotUser) {
 
     }
@@ -196,7 +201,7 @@ mod tests {
                     .button_postback("Push", "Hello"))
                 .cartBox(CartBox::new()
                     .card(CardGeneric::new("Hello")
-                        .button(Button::new_button_pb("Welcom back Mr potter", "#Youpie"))
+                        .button(Button::new_button_pb("Welcom back Mr potter", "Hello"))
                         .image("https://images.ladepeche.fr/api/v1/images/view/5c34fb833e454650457f60ce/large/image.jpg")
                         .subtitle("Bouyah"))))
             .block(Block::new("#Start")
