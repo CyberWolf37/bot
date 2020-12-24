@@ -192,10 +192,10 @@ impl CartBox {
 
     pub fn button_postback(mut self,button_text: &str ,button_payload: &str) -> Self {
         match &mut self.button {
-            Some(e) => {e.push(Button::new_button_pb(button_text, button_payload));},
+            Some(e) => {e.push(Button::new_button_quick_pb(button_text, button_payload));},
             None => {
                 let mut buttons = Vec::new();
-                buttons.push(Button::new_button_pb(button_text, button_payload));
+                buttons.push(Button::new_button_quick_pb(button_text, button_payload));
 
                 self.button = Some(buttons);
             },

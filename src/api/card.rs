@@ -1,5 +1,5 @@
 use super::button::Button;
-use serde::ser::{Serialize, Serializer};
+use serde::ser::{Serialize, Serializer, SerializeStruct};
 use serde_json::Value;
 
 pub trait Card: Send + Sync {
@@ -10,7 +10,13 @@ pub trait Card: Send + Sync {
 pub struct DefaultAction {
     status: &'static str,
     url: String,
-    title: String,
+    //title: String,
+}
+
+impl Card for DefaultAction {
+    fn to_json(&self) -> Value {
+        json!(self)
+    }
 }
 
 impl DefaultAction {
@@ -18,22 +24,24 @@ impl DefaultAction {
         DefaultAction{
             status: "web_url",
             url: String::from(url),
-            title: String::from(title),
+            //title: String::from(title),
         }
     }
 
-    pub fn to_json(&self) -> String {
+    /*pub fn to_json(&self) -> String {
         format!(r#"{{"type":"{}","url":"{}","title":"{}"}}"#,self.status,self.url,self.title)
-    }
+    }*/
 }
 
 impl Serialize for DefaultAction {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
 
     where S: Serializer,
-    {      
-        let s = format!(r#"{{"type":"{}","url":"{}","title":"{}"}}"#,self.status,self.url,self.title);
-        serializer.serialize_str(&s)
+    {     
+        let mut state = serializer.serialize_struct("DefaultAction", 3)?;
+        state.serialize_field("type", &self.status)?;
+        state.serialize_field("url", &self.url)?;
+        state.end()
     }
 }
 
@@ -48,7 +56,7 @@ pub struct CardGeneric {
 
 impl Card for CardGeneric {
     fn to_json(&self) -> Value {
-        json!(self)
+        json!({"type":"template","payload": { "template_type":"generic" , "elements": vec![self] } })
     }
 }
 
@@ -57,7 +65,23 @@ impl Serialize for CardGeneric {
 
     where S: Serializer,
     {
-        let mut s = format!(r#"{{"template_type":"generic","elements": ["#);
+        let mut state = serializer.serialize_struct("CardGeneric", 5)?;
+        state.serialize_field("title", &self.title)?;
+        state.serialize_field("subtitle", &self.subtitle.clone().unwrap())?;
+
+        if self.image_url.is_some() {
+            state.serialize_field("image_url", &self.image_url.clone().unwrap())?;
+        }
+        if self.default_action.is_some() {
+            state.serialize_field("default_action", &self.default_action.clone().unwrap())?;
+        }
+        if self.buttons.is_some() {
+            state.serialize_field("buttons", &self.buttons.clone().unwrap())?;
+        }
+        state.end()
+    }
+
+        /*let mut s = format!(r#"{{"template_type":"generic","elements": ["#);
 
         s.push_str( &format!(r#"{{"title":"{}""# 
         ,self.title));
@@ -72,7 +96,7 @@ impl Serialize for CardGeneric {
 
         match self.buttons.as_ref() {
             Some(e) => {
-                s.push_str( r#","buttons":"[""# );
+                s.push_str( r#","buttons":["# );
                 for elem in e {
                     s.push_str( &elem.to_json_str() );
                     s.push(',');
@@ -85,13 +109,14 @@ impl Serialize for CardGeneric {
 
         if self.default_action.is_some() {
             s.push_str( r#","default_action":"# );
-            s.push_str( &(self.default_action.as_ref().unwrap().to_json()) );
+            s.push_str( &(self.default_action.as_ref().unwrap().to_json()).to_string() );
         }
 
         s.push_str("]}");
 
         serializer.serialize_str(s.as_str())
-    }
+        
+    }*/
 }
 
 impl CardGeneric {
