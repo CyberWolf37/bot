@@ -44,13 +44,13 @@ pub trait ApiMessage {
 }
 
 #[derive(Clone)]
-pub struct Message {
+pub struct Message<T> where T: Card {
     text: Option<String>,
     buttons: Option<Vec<Button>>,
-    cards: Option<Vec<Card>>,
+    cards: Option<Vec<T>>,
 }
 
-impl ApiMessage for Message {
+impl<T> ApiMessage for Message<T> where T: Card {
     fn send(&self, user: &BotUser, token: &str) {
 
         fn send_json(value: serde_json::Value, token: &str) {
@@ -103,8 +103,8 @@ impl ApiMessage for Message {
     }
 }
 
-impl Message {
-    pub fn new(text : Option<String>,buttons: Option<Vec<Button>>, cards: Option<Vec<Card>>) -> Self {
+impl<T> Message<T> where T: Card {
+    pub fn new(text : Option<String>,buttons: Option<Vec<Button>>, cards: Option<Vec<T>>) -> Self {
         Message{
             text: text,
             buttons: buttons,

@@ -155,7 +155,7 @@ pub struct CartBox {
 
     text: Option<String>,
     button: Option<Vec<Button>>,
-    cards: Option<Vec<Card>>,
+    cards: Option<Vec<Arc<dyn Card>>>,
 }
 
 impl PipeBox for CartBox{
@@ -203,7 +203,7 @@ impl CartBox {
         self
     }
 
-    pub fn card(mut self, card: Card) -> Self {
+    pub fn card<T: Card>(mut self, card: T) -> Self {
         match &mut self.cards {
             Some(e) => {
                 e.push(card);
