@@ -9,6 +9,7 @@ use serde::ser::{Serialize ,Serializer};
 use log::{info, warn};
 use std::fmt;
 use ureq::*;
+use std::sync::Arc;
 
 pub enum MessagingType {
     RESPONSE,
@@ -44,13 +45,13 @@ pub trait ApiMessage {
 }
 
 #[derive(Clone)]
-pub struct Message<T> where T: Card {
+pub struct Message {
     text: Option<String>,
     buttons: Option<Vec<Button>>,
-    cards: Option<Vec<T>>,
+    cards: Option<Vec<Arc<dyn Card>>>,
 }
 
-impl<T> ApiMessage for Message<T> where T: Card {
+impl ApiMessage for Message {
     fn send(&self, user: &BotUser, token: &str) {
 
         fn send_json(value: serde_json::Value, token: &str) {
@@ -86,7 +87,7 @@ impl<T> ApiMessage for Message<T> where T: Card {
             send_json(json,token);
         }
         else if self.cards.is_some() {
-            let card =  self.cards.as_ref();
+            let card =  self.cards.as_ref().unwrap()[0].clone();
             let json =  self::json!(
                 {
                     "messaging_type": MessagingType::RESPONSE,
@@ -94,7 +95,7 @@ impl<T> ApiMessage for Message<T> where T: Card {
                         "id": user.get_sender()
                     },
                     "message": {
-                        "attachment": card.unwrap()[0]
+                        "attachment": card.to_json()
                     }
                 }
             );
@@ -103,8 +104,8 @@ impl<T> ApiMessage for Message<T> where T: Card {
     }
 }
 
-impl<T> Message<T> where T: Card {
-    pub fn new(text : Option<String>,buttons: Option<Vec<Button>>, cards: Option<Vec<T>>) -> Self {
+impl Message {
+    pub fn new(text : Option<String>,buttons: Option<Vec<Button>>, cards: Option<Vec<Arc<dyn Card>>>) -> Self {
         Message{
             text: text,
             buttons: buttons,

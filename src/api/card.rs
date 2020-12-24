@@ -1,7 +1,10 @@
 use super::button::Button;
 use serde::ser::{Serialize, Serializer};
+use serde_json::Value;
 
-pub trait Card: Clone {}
+pub trait Card: Send + Sync {
+    fn to_json(&self) -> Value;
+}
 
 #[derive(Clone)]
 pub struct DefaultAction {
@@ -19,7 +22,7 @@ impl DefaultAction {
         }
     }
 
-    pub fn to_json(&self) -> &str {
+    pub fn to_json(&self) -> String {
         format!(r#"{{"type":"{}","url":"{}","title":"{}"}}"#,self.status,self.url,self.title)
     }
 }
@@ -29,7 +32,7 @@ impl Serialize for DefaultAction {
 
     where S: Serializer,
     {      
-        let mut s = format!(r#"{{"type":"{}","url":"{}","title":"{}"}}"#,self.status,self.url,self.title);
+        let s = format!(r#"{{"type":"{}","url":"{}","title":"{}"}}"#,self.status,self.url,self.title);
         serializer.serialize_str(&s)
     }
 }
@@ -43,6 +46,12 @@ pub struct CardGeneric {
     default_action: Option<DefaultAction> // Accept an url. When the card was tapped we send an url
 }
 
+impl Card for CardGeneric {
+    fn to_json(&self) -> Value {
+        json!(self)
+    }
+}
+
 impl Serialize for CardGeneric {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
 
@@ -50,7 +59,7 @@ impl Serialize for CardGeneric {
     {
         let mut s = format!(r#"{{"template_type":"generic","elements": ["#);
 
-        s.push_str( format!(r#"{{"title":"{}""# 
+        s.push_str( &format!(r#"{{"title":"{}""# 
         ,self.title));
 
         if self.subtitle.is_some() {
@@ -76,7 +85,7 @@ impl Serialize for CardGeneric {
 
         if self.default_action.is_some() {
             s.push_str( r#","default_action":"# );
-            s.push_str( self.default_action.unwrap().to_json() );
+            s.push_str( &(self.default_action.as_ref().unwrap().to_json()) );
         }
 
         s.push_str("]}");

@@ -182,6 +182,7 @@ mod tests {
     use utils::block::Block;
     use utils::block::CartBox;
     use api::card::Card;
+    use api::card::CardGeneric;
     use api::button::Button;
 
     #[test]
@@ -194,7 +195,7 @@ mod tests {
                     .text("It's a new day")
                     .button_postback("Push", "Hello"))
                 .cartBox(CartBox::new()
-                    .card(Card::new("Hello")
+                    .card(CardGeneric::new("Hello")
                         .button(Button::new_button_pb("Welcom back Mr potter", "#Youpie"))
                         .image("https://images.ladepeche.fr/api/v1/images/view/5c34fb833e454650457f60ce/large/image.jpg")
                         .subtitle("Bouyah"))))

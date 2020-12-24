@@ -203,7 +203,8 @@ impl CartBox {
         self
     }
 
-    pub fn card<T: Card>(mut self, card: T) -> Self {
+    pub fn card<T: 'static + Card>(mut self, card: T) -> Self {
+        let card = Arc::new(card);
         match &mut self.cards {
             Some(e) => {
                 e.push(card);
