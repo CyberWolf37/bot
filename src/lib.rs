@@ -95,7 +95,7 @@ impl BotMessenger {
         self.block_default.set_token(token);
         self
     }
-
+    
     pub fn with_token_wh(mut self, token: &str) -> Self {
         self.conf.set_token_webhook(token);
         self
@@ -199,6 +199,7 @@ mod tests {
     use utils::block::CartBox;
     use api::card::Card;
     use api::card::CardGeneric;
+    use api::card::CardButtons;
     use api::button::Button;
 
     #[test]
@@ -217,11 +218,15 @@ mod tests {
                     .card(CardGeneric::new("Hello")
                         .button(Button::new_button_pb("Welcom back Mr potter", "Hello"))
                         .image("https://images.ladepeche.fr/api/v1/images/view/5c34fb833e454650457f60ce/large/image.jpg")
-                        .subtitle("Bouyah"))))
+                        .subtitle("Bouyah")))
+                .cartBox(CartBox::new()
+                    .card(CardButtons::new("Can you choose !")
+                        .button(Button::new_button_url("wake me up", "www.google.fr"))
+                        .button(Button::new_button_pb("not me !", "Hello")))))
             .block(Block::new("#Start")
                 .cartBox(CartBox::new()
                     .text("New start user")))
-            .with_token_fb("EAAKAw0ggVncBAIux8WOG4JnbbWCHJvFOeKK5yMZC3TwZAPaypjicgXH69plFsp28r0KyEwlWGFntOEEM2sNatIQFZCtuY3zSl98V6VRmvQBwwGXVZBfNq8gECNweZBR7oSwqdtTtbGiOaVRo05PzUYiHoMKPSuz6IE8EGOovzvAZDZD")
+            .with_token_fb("Your Token")
             .with_token_wh("MamaGuriba")
             .launch();
     }
