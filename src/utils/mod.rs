@@ -176,6 +176,13 @@ impl<'de> Deserialize<'de> for BotUser {
             },
             _ => None,
         };
+
+        let messageQ: Option<MessagingPostback> = match &json["entry"][0]["messaging"][0]["message"]["quick_reply"]["payload"] {
+            Value::String(e) => {
+                Some(MessagingPostback{payload: e.clone()})
+            },
+            _ => None,
+        };
         
         let messageM: Option<MessagingMessage> = match &json["entry"][0]["messaging"][0]["message"]["text"] {
             Value::String(e) => {
@@ -185,6 +192,9 @@ impl<'de> Deserialize<'de> for BotUser {
         };
 
         if let Some(i) = messageP {
+            return Ok(BotUser::new(&id, Arc::new(i)));
+        }
+        else if let Some(i) = messageQ {
             return Ok(BotUser::new(&id, Arc::new(i)));
         }
         else {
