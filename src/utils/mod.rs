@@ -160,6 +160,8 @@ impl<'de> Deserialize<'de> for BotUser {
 
         let json: Value =  Value::deserialize(deserializer)?;
 
+        println!("{}",json);
+
         let object: &String = match &json["object"] {
             Value::String(e) if e == "page" => e,
             _ => return Err(de::Error::custom("Doesn't have a valid json format API FB")),
