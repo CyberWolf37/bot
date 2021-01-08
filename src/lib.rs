@@ -176,10 +176,17 @@ fn root_connection(bot: State<Arc<Mutex<BotMessenger>>>, hub: Form<FbForm>) -> S
 #[post("/" ,format = "json", data = "<user>")]
 fn root_message(bot: State<Arc<Mutex<BotMessenger>>> ,user: Json<BotUser>) -> &'static str {
     let bot = bot.clone();
-    let bot = &mut bot.lock().unwrap();
-    info!("New user: {}",*user);
-    bot.add_user(user.clone());
-    "ok"
+    let bot = &mut bot.lock();
+
+    if let Ok(b) = bot {
+       info!("New user: {}",*user);
+        b.add_user(user.clone());
+        "ok" 
+    }
+    else {
+        "Don't understand ?"
+    }
+    
 }
 
 #[get("/")]
