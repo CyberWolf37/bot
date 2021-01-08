@@ -80,43 +80,6 @@ impl Serialize for CardGeneric {
         }
         state.end()
     }
-
-        /*let mut s = format!(r#"{{"template_type":"generic","elements": ["#);
-
-        s.push_str( &format!(r#"{{"title":"{}""# 
-        ,self.title));
-
-        if self.subtitle.is_some() {
-           s.push_str( &format!(r#","subtitle":"{}""#, self.subtitle.as_ref().unwrap()) );
-        }
-
-        if self.image_url.is_some() {
-            s.push_str( &format!(r#","image_url":"{}""#, self.image_url.as_ref().unwrap()) );
-        }     
-
-        match self.buttons.as_ref() {
-            Some(e) => {
-                s.push_str( r#","buttons":["# );
-                for elem in e {
-                    s.push_str( &elem.to_json_str() );
-                    s.push(',');
-                }
-
-                s.push(']');
-            }
-            None => {}
-        }
-
-        if self.default_action.is_some() {
-            s.push_str( r#","default_action":"# );
-            s.push_str( &(self.default_action.as_ref().unwrap().to_json()).to_string() );
-        }
-
-        s.push_str("]}");
-
-        serializer.serialize_str(s.as_str())
-        
-    }*/
 }
 
 impl CardGeneric {
@@ -143,6 +106,34 @@ impl CardGeneric {
     pub fn default_action(mut self, default_action: DefaultAction) -> Self {
         self.default_action = Some(default_action);
         self
+    }
+
+    pub fn button(mut self, button: Button) -> Self {
+        match &mut self.buttons {
+            Some(e) => e.push(button),
+            None => self.buttons = Some(vec!(button))
+        }
+        self
+    }
+}
+
+pub struct CardButtons {
+    text: String,
+    buttons: Option<Vec<Button>>,
+}
+
+impl Card for CardButtons {
+    fn to_json(&self) -> Value {
+        json!({"type":"template","payload": { "template_type":"button" , "text": self.text , "buttons" : self.buttons.clone().unwrap() } })
+    }
+}
+
+impl CardButtons {
+    pub fn new(text: &str) -> Self {
+        CardButtons{
+            text: String::from(text),
+            buttons: None,
+        }
     }
 
     pub fn button(mut self, button: Button) -> Self {

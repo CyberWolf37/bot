@@ -20,6 +20,7 @@ use std::sync::{Arc, Mutex};
 pub struct BotMessenger {
     conf: Conf,
     blocks: Vec<Block>,
+    block_default: Block,
 }
 
 impl Drop for BotMessenger {
@@ -35,6 +36,7 @@ impl BotMessenger {
         BotMessenger {
             conf: Conf::default(),
             blocks: Vec::new(),
+            block_default: Block::default(),
         }
     }
 
@@ -43,6 +45,13 @@ impl BotMessenger {
         let mut block = value;
         block.set_token(self.get_conf().get_token_fb_page());
         self.add_block(block);
+        self
+    }
+
+    pub fn block_default(mut self, value: Block) -> Self {
+        let mut block = value;
+        block.set_token(self.get_conf().get_token_fb_page());
+        self.block_default = block;
         self
     }
 
@@ -67,6 +76,7 @@ impl BotMessenger {
                 },
                     None => {
                         warn!("Don't match with any of blocks");
+                        self.block_default.root(&user);
                 }
             } 
         }
@@ -82,9 +92,10 @@ impl BotMessenger {
     pub fn with_token_fb(mut self, token: &str) -> Self {
         self.conf.set_token_fb_page(token);
         self.blocks.iter_mut().for_each(|x| x.set_token(token));
+        self.block_default.set_token(token);
         self
     }
-
+    
     pub fn with_token_wh(mut self, token: &str) -> Self {
         self.conf.set_token_webhook(token);
         self
@@ -188,11 +199,15 @@ mod tests {
     use utils::block::CartBox;
     use api::card::Card;
     use api::card::CardGeneric;
+    use api::card::CardButtons;
     use api::button::Button;
 
     #[test]
     fn it_works() { 
         BotMessenger::new()
+            .block_default(Block::new("default")
+                .cartBox(CartBox::new()
+                    .text("Sorry I don't understand 🐻")))
             .block(Block::new("Hello")
                 .cartBox(CartBox::new()
                     .text("Hello new user"))
@@ -203,11 +218,15 @@ mod tests {
                     .card(CardGeneric::new("Hello")
                         .button(Button::new_button_pb("Welcom back Mr potter", "Hello"))
                         .image("https://images.ladepeche.fr/api/v1/images/view/5c34fb833e454650457f60ce/large/image.jpg")
-                        .subtitle("Bouyah"))))
+                        .subtitle("Bouyah")))
+                .cartBox(CartBox::new()
+                    .card(CardButtons::new("Can you choose !")
+                        .button(Button::new_button_url("wake me up", "www.google.fr"))
+                        .button(Button::new_button_pb("not me !", "Hello")))))
             .block(Block::new("#Start")
                 .cartBox(CartBox::new()
                     .text("New start user")))
-            .with_token_fb("EAAKAw0ggVncBAIux8WOG4JnbbWCHJvFOeKK5yMZC3TwZAPaypjicgXH69plFsp28r0KyEwlWGFntOEEM2sNatIQFZCtuY3zSl98V6VRmvQBwwGXVZBfNq8gECNweZBR7oSwqdtTtbGiOaVRo05PzUYiHoMKPSuz6IE8EGOovzvAZDZD")
+            .with_token_fb("Your Token")
             .with_token_wh("MamaGuriba")
             .launch();
     }
