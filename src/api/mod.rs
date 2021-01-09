@@ -6,6 +6,7 @@ use button::Button;
 use card::Card;
 use utils::{BotUser};
 use serde::ser::{Serialize ,Serializer};
+use serde_json::Value;
 use log::{info, warn};
 use std::fmt;
 use ureq::*;
@@ -87,7 +88,9 @@ impl ApiMessage for Message {
             send_json(json,token);
         }
         else if self.cards.is_some() {
-            let card =  self.cards.as_ref().unwrap()[0].clone();
+            let card =  self.cards.as_ref().unwrap();
+            let cards: Vec<Value> = card.iter().map(|e| e.clone().to_json()).collect();
+
             let json =  self::json!(
                 {
                     "messaging_type": MessagingType::RESPONSE,
@@ -95,7 +98,13 @@ impl ApiMessage for Message {
                         "id": user.get_sender()
                     },
                     "message": {
-                        "attachment": card.to_json()
+                        "attachment": {
+                            "type":"template",
+                            "payload": { 
+                                "template_type": card[0].clone().typed() ,
+                                "elements": cards
+                            }
+                        }
                     }
                 }
             );

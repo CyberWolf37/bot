@@ -4,6 +4,7 @@ use serde_json::Value;
 
 pub trait Card: Send + Sync {
     fn to_json(&self) -> Value;
+    fn typed(&self) -> &'static str ;
 }
 
 #[derive(Clone)]
@@ -16,6 +17,9 @@ pub struct DefaultAction {
 impl Card for DefaultAction {
     fn to_json(&self) -> Value {
         json!(self)
+    }
+    fn typed(&self) -> &'static str {
+        "none"
     }
 }
 
@@ -56,7 +60,10 @@ pub struct CardGeneric {
 
 impl Card for CardGeneric {
     fn to_json(&self) -> Value {
-        json!({"type":"template","payload": { "template_type":"generic" , "elements": vec![self] } })
+        json!( self )
+    }
+    fn typed(&self) -> &'static str {
+        "generic"
     }
 }
 
@@ -125,6 +132,9 @@ pub struct CardButtons {
 impl Card for CardButtons {
     fn to_json(&self) -> Value {
         json!({"type":"template","payload": { "template_type":"button" , "text": self.text , "buttons" : self.buttons.clone().unwrap() } })
+    }
+    fn typed(&self) -> &'static str {
+        "buttons"
     }
 }
 

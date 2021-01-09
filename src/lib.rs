@@ -225,6 +225,10 @@ mod tests {
                     .card(CardGeneric::new("Hello")
                         .button(Button::new_button_pb("Welcom back Mr potter", "Hello"))
                         .image("https://images.ladepeche.fr/api/v1/images/view/5c34fb833e454650457f60ce/large/image.jpg")
+                        .subtitle("Bouyah"))
+                    .card(CardGeneric::new("Hello")
+                        .button(Button::new_button_pb("Welcom back Mr potter", "Hello"))
+                        .image("https://images.ladepeche.fr/api/v1/images/view/5c34fb833e454650457f60ce/large/image.jpg")
                         .subtitle("Bouyah")))
                 .cartBox(CartBox::new()
                     .card(CardButtons::new("Can you choose !")
@@ -233,7 +237,7 @@ mod tests {
             .block(Block::new("#Start")
                 .cartBox(CartBox::new()
                     .text("New start user")))
-            .with_token_fb("Your Token")
+            .with_token_fb(&std::env::var("TOKEN_FB").unwrap())
             .with_token_wh("MamaGuriba")
             .launch();
     }
