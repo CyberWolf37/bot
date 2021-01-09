@@ -90,6 +90,18 @@ impl ApiMessage for Message {
         else if self.cards.is_some() {
             let card =  self.cards.as_ref().unwrap();
             let cards: Vec<Value> = card.iter().map(|e| e.clone().to_json()).collect();
+            let payload: Value = match card[0].typed() {
+                "generic" => {
+                    self::json!({"template_type": "generic", "elements": cards})
+                },
+                "buttons" => {
+                    let value: Value = card[0].clone().to_json();
+                    value
+                }
+                _ => {
+                    self::json!({})
+                }
+            };
 
             let json =  self::json!(
                 {
@@ -100,10 +112,7 @@ impl ApiMessage for Message {
                     "message": {
                         "attachment": {
                             "type":"template",
-                            "payload": { 
-                                "template_type": card[0].clone().typed() ,
-                                "elements": cards
-                            }
+                            "payload": payload
                         }
                     }
                 }

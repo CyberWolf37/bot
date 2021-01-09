@@ -131,7 +131,7 @@ pub struct CardButtons {
 
 impl Card for CardButtons {
     fn to_json(&self) -> Value {
-        json!({"type":"template","payload": { "template_type":"button" , "text": self.text , "buttons" : self.buttons.clone().unwrap() } })
+        json!({ "template_type":"button" , "text": self.text , "buttons" : self.buttons.clone().unwrap() })
     }
     fn typed(&self) -> &'static str {
         "buttons"
