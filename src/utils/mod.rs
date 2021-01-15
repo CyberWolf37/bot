@@ -19,6 +19,7 @@ impl fmt::Display for MessagingType<'_> {
     }
 }
 
+#[derive(Clone,PartialEq)]
 pub enum PipeStatus {
     NEXT,
     REPLAY,
@@ -50,6 +51,7 @@ impl fmt::Display for dyn Messaging{
 
 pub trait PipeBox {
     fn consume(&self,message: &BotUser, token: &str) -> PipeStatus;
+    fn internal_state(&self) -> &PipeStatus;
 }
 
 #[derive(Clone)]

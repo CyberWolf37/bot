@@ -61,7 +61,15 @@ impl Block {
                             Some(x.0)
                         }
                         else {
-                            None
+                            match self.pipe[x.1.1].internal_state() {
+                                PipeStatus::NEXT => {
+                                    self.consume(user);
+                                    None
+                                }
+                                _ => {
+                                    None
+                                }
+                            }
                         }
                     },
                     PipeStatus::REPLAY => {
@@ -152,6 +160,7 @@ impl Block {
 #[derive(Clone)]
 pub struct CartBox {
     function_controle: Arc<dyn Fn(&BotUser) -> Option<&BotUser> + Send + Sync>,
+    internal_state: PipeStatus,
 
     text: Option<String>,
     button: Option<Vec<Button>>,
@@ -171,6 +180,10 @@ impl PipeBox for CartBox{
             }
         }
     }
+
+    fn internal_state(&self) -> &PipeStatus {
+        &self.internal_state
+    }
 }
 
 impl CartBox {
@@ -178,6 +191,7 @@ impl CartBox {
         let function_controle: Arc<dyn Fn(&BotUser) -> Option<&BotUser> + Send + Sync> = Arc::new(|u| {Some(u)});
         CartBox{
             function_controle: function_controle,
+            internal_state: PipeStatus::NEXT,
 
             text: None,
             button: None,
@@ -218,6 +232,10 @@ impl CartBox {
 
     pub fn with_func_ctrl(&mut self,func: Arc<dyn Fn(&BotUser) -> Option<&BotUser> + Send + Sync>){
         self.function_controle = func;
+    }
+
+    pub fn internal_state(&mut self,state: PipeStatus) {
+        self.internal_state = state;
     }
 
     fn build(&self) -> Box<dyn ApiMessage> {
