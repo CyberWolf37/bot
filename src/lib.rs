@@ -15,12 +15,14 @@ use rocket::State;
 use log::{info, warn};
 use rocket::request::Form;
 use std::sync::{Arc, Mutex};
+use std::path::Path;
 
 #[derive(Clone)]
 pub struct BotMessenger {
     conf: Conf,
     blocks: Vec<Block>,
     block_default: Block,
+    static_file: Option<Path>,
 }
 
 impl Drop for BotMessenger {
@@ -37,6 +39,7 @@ impl BotMessenger {
             conf: Conf::default(),
             blocks: Vec::new(),
             block_default: Block::default(),
+            static_file: None,
         }
     }
 
@@ -106,6 +109,11 @@ impl BotMessenger {
         self
     }
 
+    pub fn with_static_file(mut self, file: Path) -> self{
+        self.static_file = Some(file);
+        self
+    }
+
     pub fn rooting_user(&self, user: &BotUser) {
 
     }
@@ -127,8 +135,14 @@ impl BotMessenger {
         match config {
             Ok(e) => {
                 let route = format!("/{}",self.get_conf().get_uri());
-                rocket::custom(e).manage(selfy).mount(&route,routes![root_connection, root_message])
-                    .mount("/", routes![get_basic]).launch();
+                let rocket = rocket::custom(e).manage(selfy).mount(&route,routes![root_connection, root_message])
+                    .mount("/", routes![get_basic]);
+
+                if self.static_file.is_some() {
+                    rocket.mount("/", StaticFiles::from(self.static_file.unwrap().to_str()))
+                }
+                
+                rocket.launch();
             }
             Err(e) => panic!("Failed init config : {}", e)
         } 
@@ -205,6 +219,7 @@ mod tests {
     use utils::block::Block;
     use utils::block::CartBox;
     use api::card::Card;
+    use api::card::DefaultAction;
     use api::card::CardGeneric;
     use api::card::CardButtons;
     use api::button::Button;
@@ -227,6 +242,7 @@ mod tests {
                     .button_postback("Push", "Hello"))
                 .cartBox(CartBox::new()
                     .card(CardGeneric::new("Hello")
+                        .default_action(DefaultAction::new_postback("Hello"))
                         .button(Button::new_button_pb("Welcom back Mr potter", "Hello"))
                         .image("https://images.ladepeche.fr/api/v1/images/view/5c34fb833e454650457f60ce/large/image.jpg")
                         .subtitle("Bouyah"))
