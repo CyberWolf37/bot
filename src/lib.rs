@@ -141,7 +141,7 @@ impl BotMessenger {
                 if self.static_file.is_some() {
                     let option = Options::None;
                     let s = self.static_file.clone().unwrap();
-                    rocket = rocket.mount("/static", StaticFiles::new(s,option).rank(3));
+                    rocket = rocket.mount("/static", StaticFiles::from(format!("{}{}",env!("CARGO_MANIFEST_DIR"), s.as_str())));
                 }
                 
                 rocket.launch();
