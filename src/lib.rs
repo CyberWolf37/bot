@@ -10,7 +10,7 @@ pub mod api;
 use utils::block::Block;
 use utils::{Conf, BotUser};
 use rocket_contrib::json::{Json};
-use rocket_contrib::serve::StaticFiles;
+use rocket_contrib::serve::{StaticFiles, Options};
 use rocket::config::{Config, Environment};
 use rocket::State;
 use log::{info, warn};
@@ -139,8 +139,9 @@ impl BotMessenger {
                     .mount("/", routes![get_basic]);
 
                 if self.static_file.is_some() {
+                    let option = Options::None;
                     let s = self.static_file.clone().unwrap();
-                    rocket = rocket.mount("/static", StaticFiles::from(s));
+                    rocket = rocket.mount("/static", StaticFiles::new(s,option).rank(3));
                 }
                 
                 rocket.launch();
