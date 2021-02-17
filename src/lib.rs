@@ -10,19 +10,19 @@ pub mod api;
 use utils::block::Block;
 use utils::{Conf, BotUser};
 use rocket_contrib::json::{Json};
+use rocket_contrib::serve::StaticFiles;
 use rocket::config::{Config, Environment};
 use rocket::State;
 use log::{info, warn};
 use rocket::request::Form;
 use std::sync::{Arc, Mutex};
-use std::path::Path;
 
 #[derive(Clone)]
 pub struct BotMessenger {
     conf: Conf,
     blocks: Vec<Block>,
     block_default: Block,
-    static_file: Option<Path>,
+    static_file: Option<String>,
 }
 
 impl Drop for BotMessenger {
@@ -109,7 +109,7 @@ impl BotMessenger {
         self
     }
 
-    pub fn with_static_file(mut self, file: Path) -> self{
+    pub fn with_static_file(mut self, file: String) -> Self{
         self.static_file = Some(file);
         self
     }
@@ -135,11 +135,12 @@ impl BotMessenger {
         match config {
             Ok(e) => {
                 let route = format!("/{}",self.get_conf().get_uri());
-                let rocket = rocket::custom(e).manage(selfy).mount(&route,routes![root_connection, root_message])
+                let mut rocket = rocket::custom(e).manage(selfy).mount(&route,routes![root_connection, root_message])
                     .mount("/", routes![get_basic]);
 
                 if self.static_file.is_some() {
-                    rocket.mount("/", StaticFiles::from(self.static_file.unwrap().to_str()))
+                    let s = self.static_file.clone().unwrap();
+                    rocket = rocket.mount("/", StaticFiles::from(s));
                 }
                 
                 rocket.launch();
@@ -242,7 +243,6 @@ mod tests {
                     .button_postback("Push", "Hello"))
                 .cartBox(CartBox::new()
                     .card(CardGeneric::new("Hello")
-                        .default_action(DefaultAction::new_postback("Hello"))
                         .button(Button::new_button_pb("Welcom back Mr potter", "Hello"))
                         .image("https://images.ladepeche.fr/api/v1/images/view/5c34fb833e454650457f60ce/large/image.jpg")
                         .subtitle("Bouyah"))
