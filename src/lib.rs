@@ -140,7 +140,7 @@ impl BotMessenger {
 
                 if self.static_file.is_some() {
                     let s = self.static_file.clone().unwrap();
-                    rocket = rocket.mount("/", StaticFiles::from(s));
+                    rocket = rocket.mount("/static", StaticFiles::from(s));
                 }
                 
                 rocket.launch();
